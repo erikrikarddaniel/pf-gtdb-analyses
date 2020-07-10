@@ -53,5 +53,5 @@ tblout %>%
   write_feather("pfitmap-gtdb-rep.tblout.feather")
 
 domtblout %>%
-  inner_join (reps_accnos, by = 'accno') %>%
+  semi_join (reps_accnos, by = 'accno') %>%
   write_feather("pfitmap-gtdb-rep.domtblout.feather")
