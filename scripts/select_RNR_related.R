@@ -21,31 +21,31 @@ sequences <- read_feather(sprintf("%s.sequences.feather", prefix))
 tblout <- read_feather(sprintf("%s.tblout.feather", prefix))
 domtblout <- read_feather(sprintf("%s.domtblout.feather", prefix))
 
-RNR_accnos = hmm_profiles %>% 
+rnrs = hmm_profiles %>% 
   inner_join(proteins, by = 'profile') %>%
   filter (psuperfamily %in% c('Ferritin-like', 'NrdGRE', 'Flavodoxin superfamily', 'NrdR-superfamily')) %>%
   select(accno, profile)
 
 proteins %>% 
-  inner_join (RNR_accnos %>% select (accno), by = 'accno') %>%
+  inner_join (rnrs %>% select (accno), by = 'accno') %>%
   write_feather(sprintf("%s-RNRs.proteins.feather", prefix))
 
 accessions %>% 
-  inner_join (RNR_accnos %>% select (accno), by = 'accno') %>%
+  inner_join (rnrs %>% select (accno), by = 'accno') %>%
   write_feather(sprintf("%s-RNRs.accessions.feather", prefix))
 
 domains %>% 
-   inner_join (RNR_accnos, by = c('accno', 'profile')) %>%
+   inner_join (rnrs, by = c('accno', 'profile')) %>%
   write_feather(sprintf("%s-RNRs.domains.feather", prefix))
   
 sequences %>%
-  inner_join (RNR_accnos %>% select (accno), by = 'accno') %>%
+  inner_join (rnrs %>% select (accno), by = 'accno') %>%
   write_feather(sprintf("%s-RNRs.sequences.feather", prefix))
 
 tblout %>% 
-  inner_join (RNR_accnos, by = c('accno', 'profile')) %>%
+  inner_join (rnrs, by = c('accno', 'profile')) %>%
   write_feather(sprintf("%s-RNRs.tblout.feather", prefix))
 
 domtblout %>%
-  inner_join (RNR_accnos, by = c('accno', 'profile')) %>%
+  inner_join (rnrs, by = c('accno', 'profile')) %>%
   write_feather(sprintf("%s-RNRs.domtblout.feather", prefix))
