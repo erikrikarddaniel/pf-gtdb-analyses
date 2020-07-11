@@ -4,14 +4,14 @@ all: get_prefix sp_clusters.tsv
 RELEASE = latest
 
 sp_clusters.tsv:
-	wget https://data.ace.uq.edu.au/public/gtdb/data/releases/RELEASE/sp_clusters.tsv
+	wget https://data.ace.uq.edu.au/public/gtdb/data/releases/$$(RELEASE)/sp_clusters.tsv
 
 sebset_reps:
 	select_gtdb_representatives.R
 	
-get_prefix:
-    @echo "Choose data to subset: pfitmap-gtdb or pfitmap-RNRs-gtdb"; \
-    read prefix;
+PREFIX_1 = pfitmap-gtdb 
+PREFIX_2 = pfitmap-RNRs-gtdb
     
 subset_rnrs:
-	select_RNR_related.R $$(prefix)
+	select_RNR_related.R $$(PREFIX_1)
+	select_RNR_related.R $$(PREFIX_2)
