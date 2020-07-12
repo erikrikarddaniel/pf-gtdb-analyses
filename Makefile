@@ -24,4 +24,4 @@ subset_rnrs_in_gtdb: download_data
 	select_RNR_related.R pfitmap-gtdb
 
 subset_rnrs_in_reps: subset_reps
-	select_RNR_related.R pfitmap-gtdb-re	
+	select_RNR_related.R pfitmap-gtdb-rep	
