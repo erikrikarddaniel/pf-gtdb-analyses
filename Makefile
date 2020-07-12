@@ -1,6 +1,7 @@
-all: download_data sp_clusters.tsv subset_reps subset_rnrs_in_gtdb subset_rnrs_in_reps
+all: download_data  
 	cd data; make $@
-	 
+	make subset_rnrs_gtdb subset_reps subset_rnrs_reps
+	
 download_data:
 	rsync sequoia:pfitmap-gtdb.accessions.feather
 	rsync sequoia:pfitmap-gtdb.dbsources.feather
@@ -20,8 +21,8 @@ sp_clusters.tsv:
 subset_reps: download_data sp_clusters.tsv
 	select_gtdb_representatives.R
     
-subset_rnrs_in_gtdb: download_data 
+subset_rnrs_gtdb: download_data 
 	select_RNR_related.R pfitmap-gtdb
 
-subset_rnrs_in_reps: subset_reps
+subset_rnrs_reps: subset_reps
 	select_RNR_related.R pfitmap-gtdb-rep	
