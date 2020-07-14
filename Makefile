@@ -20,9 +20,12 @@ sp_clusters.tsv:
 
 subset_reps: download_data sp_clusters.tsv
 	select_gtdb_representatives.R
+	touch $@
     
 subset_rnrs_gtdb: download_data 
 	select_RNR_related.R pfitmap-gtdb
+	touch $@
 
 subset_rnrs_reps: subset_reps
 	select_RNR_related.R pfitmap-gtdb-rep	
+	touch $@
