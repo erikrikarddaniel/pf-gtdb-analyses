@@ -1,0 +1,117 @@
+---
+title: "Stand alone ATP cones in RNRdb"
+author: "Daniel Lundin, Ghada Nouairia"
+date: "July 9, 2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Packages}
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(feather))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stringr))
+library(ggplot2)
+library(tidyverse)
+```
+
+```{r Load tables}
+accessions <- read_feather("pfitmap-gtdb.accessions.feather")
+# dbsources <- read_feather('pfitmap-gtdb.dbsources.feather')
+domains <- read_feather('pfitmap-gtdb.domains.feather')
+hmm_profiles <- read_feather('pfitmap-gtdb.hmm_profiles.feather')
+proteins <- read_feather('pfitmap-gtdb.proteins.feather')
+sequences <- read_feather('pfitmap-gtdb.sequences.feather')
+taxa <- read_feather('pfitmap-gtdb.taxa.feather')
+# tblout <- read_feather('pfitmap-gtdb.tblout.feather')
+domtblout <- read_feather('pfitmap-gtdb.domtblout.feather')
+```
+
+```{r Open All_domains}
+all_domains <- hmm_profiles %>%
+  inner_join(domains, by = 'profile') %>%
+  inner_join(accessions %>% 
+            select(accno, genome_accno), 
+            by = 'accno') 
+```
+
+```{r ATP stand alone ATP-cones}
+atp_sa = all_domains %>% 
+  filter(profile == 'ATP-cone') %>%
+  # anti_join(All_domains %>% filter(psuperfamily %in% c('Ferritin-like', 'NrdR-superamily', 'NrdGRE')), by = 'accno') %>%
+  inner_join(domtblout %>% select(accno, tlen), by = 'accno') %>%
+  filter(tlen < 120)
+```
+
+```{r list of genomes with sa_ATPcones}
+
+###choose the domain of life you are looking at
+Domain = 'Bacteria'
+
+###write a table with all genomes containing at least one stand alone ATP cone
+atp_sa %>% 
+  distinct(accno, genome_accno) %>%
+  inner_join(taxa, by = 'genome_accno') %>%
+  filter(tdomain == Domain) %>%
+  select(accno, tphylum, tclass, tspecies) %>%
+  group_by(tphylum) %>% 
+  mutate(count_by_phylum = sum(!is.na(tphylum))) %>% 
+  mutate(count_by_phylum = replace(count_by_phylum, count_by_phylum == '0', '-')) %>%
+  ungroup %>% group_by(tclass) %>%
+  mutate(count_by_class = sum(!is.na(tclass))) %>%
+  mutate(count_by_class = replace(count_by_class, count_by_class == '0', '-')) %>%
+  distinct (tspecies)
+  write_tsv(sprintf("./ATP-cone_sa_in_%s.tsv", Domain))
+ 
+ ###Plots 
+ atp_sa %>% 
+  distinct(accno, genome_accno) %>% 
+  inner_join(taxa, by = 'genome_accno') %>%
+  filter(tdomain == Domain) %>%
+  select(accno, tphylum, tclass, tspecies) %>%
+  # filter(tphylum %in% c('Euryarchaeota', 'Crenarchaeota', 'Thaumarchaeota')) %>%
+  group_by(tphylum) %>% 
+  mutate(count_by_phylum = n()) %>% 
+  ungroup %>% group_by(tclass) %>%
+  mutate(count_by_class = n()) %>%
+  filter(count_by_class > 0) %>%
+  # filter(count_by_phylum > 0) %>%
+  ggplot(aes(x=tclass, y=count_by_class)) +
+  geom_bar(stat="identity")+
+  ylab('Number of sequences') +
+  xlab(sprintf('Stand alone ATP-cones in %s Classes', Domain)) +
+   
+  # ggplot(aes(x=tphylum, y=count_by_phylum)) +
+  # geom_bar(stat="identity")+ 
+  # ylab('Number of sequences') +
+  # xlab(sprintf('Stand alone ATP-cones in some %s Phyla', Domain))  +
+ 
+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+ theme_minimal()
+```
+ 
+```{r list of Bacteria genomes with sa_ATPcones + NrdR + No NrdD} 
+  atp_sa %>% 
+  distinct(accno, genome_accno) %>% 
+  inner_join(taxa, by = 'genome_accno') %>%
+  filter(tdomain == 'Bacteria') %>%
+  
+  ###Only list of species
+  semi_join(all_domains %>% 
+             filter(profile == 'NrdR'),
+             by = 'genome_accno') %>% 
+  
+  ###Exclude genomes containing class III RNR 
+  anti_join(all_domains %>% 
+              filter(pclass == 'NrdD'), 
+            by = 'genome_accno') %>% 
+  distinct(tspecies) %>%
+  write_tsv("./ATP-cone_sa_NrdR_noNrdD_Bacteria.tsv")
+```
+
+  
