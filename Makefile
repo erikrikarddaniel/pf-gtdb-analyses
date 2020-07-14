@@ -18,14 +18,14 @@ RELEASE = latest
 sp_clusters.tsv:
 	wget https://data.ace.uq.edu.au/public/gtdb/data/releases/$$(RELEASE)/sp_clusters.tsv
 
-subset_reps: download_data sp_clusters.tsv
+subset_reps: pfitmap-gtdb.accessions.feather pfitmap-gtdb.domains.feather pfitmap-gtdb.taxa.feather pfitmap-gtdb.proteins.feather pfitmap-gtdb.sequences.feather pfitmap-gtdb.domtblout.feather pfitmap-gtdb.tblout.feather sp_clusters.tsv
 	select_gtdb_representatives.R
 	touch $@
     
-subset_rnrs_gtdb: download_data 
+subset_rnrs_gtdb: pfitmap-gtdb.accessions.feather pfitmap-gtdb.domains.feather pfitmap-gtdb.proteins.feather pfitmap-gtdb.sequences.feather pfitmap-gtdb.domtblout.feather pfitmap-gtdb.tblout.feather
 	select_RNR_related.R pfitmap-gtdb
 	touch $@
 
-subset_rnrs_reps: subset_reps
+subset_rnrs_reps: pfitmap-gtdb-rep.accessions.feather pfitmap-gtdb-rep.domains.feather pfitmap-gtdb-rep.proteins.feather pfitmap-gtdb-rep.sequences.feather pfitmap-gtdb-rep.domtblout.feather pfitmap-gtdb-rep.tblout.feather
 	select_RNR_related.R pfitmap-gtdb-rep	
 	touch $@
