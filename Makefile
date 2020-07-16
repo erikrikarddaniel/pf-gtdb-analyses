@@ -1,6 +1,7 @@
 all: download_data  
 	cd data; make $@
-	make subset_rnrs_gtdb subset_reps subset_rnrs_reps
+	make subset_rnrs_gtdb subset_reps 
+	make subset_rnrs_reps
 	
 download_data:
 	rsync sequoia:pfitmap-gtdb.accessions.feather
