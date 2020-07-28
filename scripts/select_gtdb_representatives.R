@@ -11,29 +11,23 @@ suppressPackageStartupMessages(library(feather))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(stringr))
 
-accessions <- read_feather('pfitmap-gtdb.accessions.feather')
-domains <- read_feather('pfitmap-gtdb.domains.feather')
-proteins <- read_feather('pfitmap-gtdb.proteins.feather')
-sequences <- read_feather('pfitmap-gtdb.sequences.feather')
-taxa <- read_feather('pfitmap-gtdb.taxa.feather')
-tblout <- read_feather('pfitmap-gtdb.tblout.feather')
-domtblout <- read_feather('pfitmap-gtdb.domtblout.feather')
-
-representatives <- read_tsv('sp_clusters.tsv') 
-names(representatives)<-str_replace_all(names(representatives), c(" " = "."))
+accessions <- read_feather('../data/pfitmap-gtdb.accessions.feather')
+domains <- read_feather('../data/pfitmap-gtdb.domains.feather')
+proteins <- read_feather('../data/pfitmap-gtdb.proteins.feather')
+sequences <- read_feather('../data/pfitmap-gtdb.sequences.feather')
+taxa <- read_feather('../data/pfitmap-gtdb.taxa.feather')
+tblout <- read_feather('../data/pfitmap-gtdb.tblout.feather')
+domtblout <- read_feather('../data/pfitmap-gtdb.domtblout.feather')
 
 reps_accnos = accessions %>%
-  mutate(genome = sub("GCA_", "", genome_accno)) %>%
-  semi_join(representatives %>% 
-              mutate (genome = sub("GB_GCA_", "", Representative.genome)) %>% mutate(genome = sub("RS_GCF_", "", genome)) %>% 
-              mutate(genome = sub("\\.[1-9]", "", genome)), 
-            by = 'genome') %>% 
-  select(db, genome_accno, accno)
+   semi_join(taxa %>% 
+              filter (gtdb_representative == 't'), 
+            by = 'genome_accno') 
 
 write_feather (reps_accnos, "pfitmap-gtdb-rep.accessions.feather")
 
 taxa %>%
-  semi_join(reps_accnos, by = 'genome_accno') %>%
+  filter (gtdb_representative == 't') %>%
   write_feather("pfitmap-gtdb-rep.taxa.feather")
 
 proteins %>% 

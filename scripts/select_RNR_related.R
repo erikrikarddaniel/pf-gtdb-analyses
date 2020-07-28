@@ -13,13 +13,13 @@ suppressPackageStartupMessages(library(stringr))
 
 prefix = commandArgs(trailingOnly=TRUE)
 
-accessions <- read_feather(sprintf("%s.accessions.feather", prefix))
-hmm_profiles <- read_feather(sprintf("%s.hmm_profiles.feather", prefix))
-domains <- read_feather(sprintf("%s.domains.feather", prefix))
-proteins <- read_feather(sprintf("%s.proteins.feather", prefix))
-sequences <- read_feather(sprintf("%s.sequences.feather", prefix))
-tblout <- read_feather(sprintf("%s.tblout.feather", prefix))
-domtblout <- read_feather(sprintf("%s.domtblout.feather", prefix))
+accessions <- read_feather(sprintf("../data/%s.accessions.feather", prefix))
+hmm_profiles <- read_feather(sprintf("../data/%s.hmm_profiles.feather", prefix))
+domains <- read_feather(sprintf("../data/%s.domains.feather", prefix))
+proteins <- read_feather(sprintf("../data/%s.proteins.feather", prefix))
+sequences <- read_feather(sprintf("../data/%s.sequences.feather", prefix))
+tblout <- read_feather(sprintf("../data/%s.tblout.feather", prefix))
+domtblout <- read_feather(sprintf("../data/%s.domtblout.feather", prefix))
 
 rnrs = hmm_profiles %>% 
   inner_join(proteins, by = 'profile') %>%
