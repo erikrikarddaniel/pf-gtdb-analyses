@@ -22,30 +22,29 @@ domtblout <- read_feather('../data/pfitmap-gtdb.domtblout.feather')
 reps_accnos = accessions %>%
    semi_join(taxa %>% 
               filter (gtdb_representative == 't'), 
-            by = 'genome_accno') 
-
-write_feather (reps_accnos, "pfitmap-gtdb-rep.accessions.feather")
+            by = 'genome_accno')
+write_feather (reps_accnos, "../data/pfitmap-gtdb-rep.accessions.feather")
 
 taxa %>%
   filter (gtdb_representative == 't') %>%
-  write_feather("pfitmap-gtdb-rep.taxa.feather")
+  write_feather("../data/pfitmap-gtdb-rep.taxa.feather")
 
 proteins %>% 
     semi_join (reps_accnos, by = 'accno') %>%
-    write_feather("pfitmap-gtdb-rep.proteins.feather")
+    write_feather("../data/pfitmap-gtdb-rep.proteins.feather")
 
 domains %>% 
   semi_join (reps_accnos, by = 'accno') %>%
-  write_feather("pfitmap-gtdb-rep.domains.feather")
+  write_feather("../data/pfitmap-gtdb-rep.domains.feather")
 
 sequences %>%
   semi_join (reps_accnos, by = 'accno') %>%
-  write_feather("pfitmap-gtdb-rep.sequences.feather")
+  write_feather("../data/pfitmap-gtdb-rep.sequences.feather")
 
 tblout %>% 
   semi_join (reps_accnos, by = 'accno') %>%
-  write_feather("pfitmap-gtdb-rep.tblout.feather")
+  write_feather("../data/pfitmap-gtdb-rep.tblout.feather")
 
 domtblout %>%
   semi_join (reps_accnos, by = 'accno') %>%
-  write_feather("pfitmap-gtdb-rep.domtblout.feather")
+  write_feather("../data/pfitmap-gtdb-rep.domtblout.feather")
