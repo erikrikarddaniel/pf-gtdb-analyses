@@ -21,7 +21,7 @@ library(tidyverse)
 ```
 
 ```{r Load tables}
-accessions <- read_feather("pfitmap-RNRs-gtdb.accessions.feather")
+accessions <- read_feather("data/pfitmap-RNRs-gtdb.accessions.feather")
 # dbsources <- read_feather('pfitmap-gtdb.dbsources.feather')
 # domains <- read_feather('pfitmap-gtdb.domains.feather')
 hmm_profiles <- read_feather('pfitmap-gtdb.hmm_profiles.feather')
@@ -79,7 +79,7 @@ nrdr_by_level = nrdrs %>%
  
  ###Plotting 
  nrdr_by_level %>% 
-    ggplot(aes_string(x=level, y='proportion')) +
+  ggplot(aes_string(x=level, y='proportion')) +
   geom_bar(stat="identity")+
   ylab('Proportion of NrdR') +
   xlab(sprintf('%s %s', domain, level)) +
@@ -104,6 +104,10 @@ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
   
 ```{r NrdR presence with RNR classes}
+
+```
+  
+```{r NrdR paralogs}
 
 ```
   
