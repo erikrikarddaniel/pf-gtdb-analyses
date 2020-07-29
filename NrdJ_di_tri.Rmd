@@ -1,0 +1,120 @@
+
+---
+title: "<GTDB_NrdJ"
+author: "Daniel Lundin, Ghada Nouairia"
+date: "June 8, 2020"
+output:
+  html_document: default
+  pdf_document: default
+editor_options: 
+  chunk_output_type: console
+---
+```{r Loading packages}
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(feather))
+suppressPackageStartupMessages(library(dplyr))
+# suppressPackageStartupMessages(library(stringr))
+# suppressPackageStartupMessages(library(tidyr))
+library(ggplot2)
+library(tidyverse)
+library(stringr)
+library(RColorBrewer)
+```
+#Read feather
+```{r}
+accessions <- read_feather('data/pfitmap-gtdb-prelim.accessions.feather')
+# domains <- read_feather('data/pfitmap-gtdb-prelim.domains.feather')
+hmm_profiles <- read_feather('data/pfitmap-gtdb-prelim.hmm_profiles.feather')
+proteins <- read_feather('data/pfitmap-gtdb-prelim.proteins.feather')
+taxa <- read_feather('data/pfitmap-gtdb-prelim.taxa.feather')
+# tblout <- read_feather('data/pfitmap-gtdb-prelim.tblout.feather')
+# domtblout <- read_feather('data/pfitmap-gtdb-prelim.domtblout.feather')
+representatives <- read_tsv('data/sp_clusters.tsv') 
+names(representatives)<-str_replace_all(names(representatives), c(" " = "."))
+```
+
+#Select genomes with NrdJs; only in representatives and write FASTA file with all sequences
+```{r NrdJ}
+#### Select only NrdJs and only representatives
+ NrdJ = hmm_profiles %>%
+  inner_join(proteins, by = 'profile') %>%
+  inner_join(accessions %>% 
+               select(accno, genome_accno), 
+             by = 'accno') %>%
+  inner_join(taxa, by = 'genome_accno') %>%
+  filter(pclass == "NrdJ") %>%
+  mutate(genome = sub("GCA_", "", genome_accno)) %>%
+  semi_join(representatives %>% 
+              mutate (genome = sub("GB_GCA_", "", Representative.genome)) %>% 
+              mutate(genome = sub("RS_GCF_", "", genome)) %>% 
+              mutate(genome = sub("\\.[1-9]", "", genome)), 
+            by = 'genome') 
+ 
+### Write list of NrdJ accnos to extract them from all_genomes.faa 
+ subclass = 'NrdJk'
+ NrdJ %>%
+ filter (psubclass == subclass) %>%
+ select(accno) %>% 
+  write_tsv(sprintf("NrdJ_alignments/all_%s_accnos_cooccuring_in_gtdb_rep.list", subclass))
+  
+### Write a table with all NrdJ accnos
+ NrdJ %>%
+ write_tsv("All_NrdJ_accnos_in_gtdb_representatives.tsv")
+```
+
+#Check genomes with multiple NrdJs; count NDP vs. NTP NrdJs by genome....
+```{r Multiple NrdJs genomes plot}
+mNrdJ = NrdJ %>% 
+  select(genome_accno, accno, psubclass, tdomain, tphylum, tclass, torder, tfamily, tspecies) %>%
+  group_by(genome_accno) %>% 
+  mutate (count = n())  %>% 
+  filter(count > 1) %>%
+  ungroup 
+```
+
+##Replacing psubclass information by NTP/NDP specificity
+```{r NDP and NTP in multiple NrdJs genomes}
+specificity = mNrdJ %>%
+  mutate(substrate = "NTP") %>% 
+  mutate(substrate = replace(substrate, psubclass %in% c("NrdJd", "NrdJuc02"), "NDP")) %>% 
+  ##Accnos with NDP motif from the mixed subclass NrdJk
+  mutate(substrate = replace(substrate, accno %in% c("HLKIKLJ_01219", "OEMEMMGG_01904", "PDKMAGGH_00767", "PDKMAGGH_02120", "GIBPDKGH_02975", "IEIIANDI_00269", "LEJBDPGP_01507", "MHDPDDBM_00343", "LDHEIDJH_00462", "LDHEIDJH_02480"), "NDP")) %>% 
+  group_by(genome_accno, substrate) %>% 
+  mutate (scount = n()) %>%
+  distinct (genome_accno, tspecies, scount, substrate) %>%
+    pivot_wider(names_from = substrate, values_from = scount, values_fill = NULL) 
+
+###Writing all genomes with multiple occurence of NrdJ, with information about substrate specificity in a tsv format 
+specificity %>% 
+  write_tsv("Co-occurence_of_NrdJs_by_substrate_specificity.tsv", na = "0" )
+
+  ##Plot NDP Vs. NTP NrdJs in genomes with multiple NrdJs > don't apply pivo_wider step
+specificity %>% ggplot(aes(x=genome_accno, y=scount, fill=substrate)) +
+  geom_bar(stat="identity")+ 
+  scale_fill_brewer(palette="Paired") +
+  ylab('Number of distinct NrdJ subclass') +
+  xlab('Genomes') +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+#Check Subclass combinations 
+```{r Abundunce of psubclass combinations in multiple NrdJ genomes}
+mNrdJ %>% 
+  filter(count == 2) %>%
+  group_by (genome_accno, psubclass) %>% 
+  distinct (genome_accno, psubclass, tdomain, tphylum, tclass, torder, tfamily) %>%
+  group_by(genome_accno) %>%
+ pivot_wider(names_from = psubclass, values_from = psubclass, values_fill = NULL) %>%
+```
+
+#NrdJs from the genome with 12 copies of NrdJ
+```{r Genome with 12 NrdJs}
+NrdJ_12 = hmm_profiles %>%
+  inner_join(proteins, by = 'profile') %>%
+  inner_join(accessions %>%
+               select(accno, genome_accno),
+             by = 'accno') %>%
+  inner_join(taxa, by = 'genome_accno') %>%
+  filter(pclass == "NrdJ") %>%
+  filter (genome_accno == "GCA_002696165")
+```
