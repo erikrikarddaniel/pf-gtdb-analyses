@@ -1,3 +1,6 @@
+include ../scripts/select_gtdb_representatives.R
+include ../scripts/select_RNR_related.R
+
 SOURCE_DIR = sequoia:/data/gtdb_pfitmap/results/
 
 all:

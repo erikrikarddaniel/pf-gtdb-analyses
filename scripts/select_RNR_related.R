@@ -11,10 +11,11 @@ suppressPackageStartupMessages(library(feather))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(stringr))
 
-prefix = commandArgs(trailingOnly=TRUE)
+# prefix = commandArgs(trailingOnly=TRUE)
+prefix = "pfitmap-gtdb-rep"
 
 accessions <- read_feather(sprintf("../data/%s.accessions.feather", prefix))
-hmm_profiles <- read_feather(sprintf("../data/%s.hmm_profiles.feather", prefix))
+hmm_profiles <- read_feather("../data/pfitmap-gtdb.hmm_profiles.feather")
 domains <- read_feather(sprintf("../data/%s.domains.feather", prefix))
 proteins <- read_feather(sprintf("../data/%s.proteins.feather", prefix))
 sequences <- read_feather(sprintf("../data/%s.sequences.feather", prefix))
@@ -49,3 +50,4 @@ tblout %>%
 domtblout %>%
   inner_join (rnrs, by = c('accno', 'profile')) %>%
   write_feather(sprintf("../data/%s-RNRs.domtblout.feather", prefix))
+
