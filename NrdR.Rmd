@@ -214,7 +214,7 @@ nrdr_mrnr_prop %>%
 ```{r NrdR presence with multiple RNR/different classes}
 
 ###Proportion of nrdr with multiple RNR in the genome (tibble output) but from different RNR classes 
-domain = 'Bacteria'
+domain = 'Archaea'
 level = 'tphylum'
 
 nrdr_drnr = nrdr_mrnr %>%
@@ -224,8 +224,8 @@ nrdr_drnr = nrdr_mrnr %>%
   mutate(pcount= n()) %>%
   ungroup %>%
   distinct(genome_accno, tphylum, pclass, pcount) %>%
-  pivot_wider(names_from = pclass, values_from = pcount) %>%
-  mutate(na_count = rowSums(is.na(nrdr_drnr))) %>%
+  pivot_wider(names_from = pclass, values_from = pcount)
+nrdr_drnr = nrdr_drnr %>% mutate(na_count = rowSums(is.na(nrdr_drnr))) %>%
   filter(na_count < 2)
 
 ###Occurence of Nrdr with each rnr class combination
@@ -252,6 +252,43 @@ nrdr_drnr %>%
             by = level) %>%
   mutate(NrdAJ_prop = NrdAJ / genome_by_level, NrdAD_prop = NrdAD / genome_by_level, NrdDJ_prop = NrdJD / genome_by_level) 
 
+```
+  
+```{r NrdR in Archaea with class I RNR}
+level = 'tphylum'
+
+###NrdR+NrdA combination existed in one Archaeal class in each of the three phyla that had this combination (i.e. looking at phylum level, no variability by tclass was found, so we checked by torder)
+sublevel = 'torder'
+
+nrdr_nrda = nrdrs %>%
+    filter(tdomain == 'Archaea') %>%
+  select(genome_accno, level, sublevel, tspecies) %>%
+  semi_join(rnrs %>% 
+###We are supposing genomes with NrdA to have fully functional class I RNR without checking for NrdB subunit 
+               filter(pclass == 'NrdA'), 
+             by = 'genome_accno') %>%
+  group_by_at(level) %>%
+  mutate(count= n()) %>%
+  inner_join(taxa %>%
+              group_by_at(level)%>%
+              summarize(genome_by_level = n()),
+            by = level) %>%
+  mutate(proportion = count/genome_by_level) 
+
+###Proportion of genomes with NrdR and NrdA by phylum
+nrdr_nrda %>%
+  distinct(tphylum, count, proportion)
+
+###Plotting NrdR + class I RNR combination by taxonomic level
+nrdr_nrda %>% 
+  distinct(tphylum, torder, count, genome_by_level, proportion) %>%
+  # filter(genome_by_level > 1) %>%
+  ggplot(aes_string(x=level, y="proportion", fill=sublevel)) +
+  geom_bar(stat="identity") +
+  ylab(sprintf('Proportion of %s genomes with NrdR and class I RNR', domain)) +
+  xlab(sprintf('%s with NrdR and class I RNR in %s', level, domain)) +
+  guides(fill=guide_legend(title=sprintf("%s", sublevel))) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
   
 ```{r Presence of NrdR with RNR on the same strand/operon}
