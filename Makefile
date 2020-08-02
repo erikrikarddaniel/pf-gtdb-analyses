@@ -1,2 +1,2 @@
 all:
-        cd data; make $@
+	cd data; make $@
