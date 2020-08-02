@@ -61,12 +61,6 @@ rnrs = hmm_profiles %>%
              by = 'genome_accno') 
 ```
 
-```{r genome count by taxonomic level}
-taxa_count = 
-
-```
-
-
 ```{r Proportion of genomes with NrdR in domains of life}
 nrdr_freq = nrdrs %>%
   distinct(tdomain, genome_accno) %>%
