@@ -13,8 +13,10 @@ output:
 knitr::opts_chunk$set(echo = F, fig.path = 'figures/', cache = TRUE)
 ggplot2::theme_set(ggplot2::theme_bw())
 
+# Constants
 NRDR_MIN_HMM_COVERAGE = 0.9
 
+# Libraries
 library(kfigr)
 library(readr)
 library(feather)
