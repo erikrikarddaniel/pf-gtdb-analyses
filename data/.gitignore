@@ -1,2 +1,5 @@
 *.tsv
 *.feather
+subset_reps
+subset_rnrs_gtdb
+subset_rnrs_reps
