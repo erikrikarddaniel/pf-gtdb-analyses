@@ -1,27 +1,31 @@
 ---
 title: "NrdR in GTDB"
-author: "Daniel Lundin, Ghada Nouairia"
-date: "July 9, 2020"
+author: "Ghada Nouairia & Daniel Lundin"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
-  html_document: default
-  pdf_document: default
+  html_document: 
+    toc: yes
+  pdf_document: 
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+knitr::opts_chunk$set(echo = F, fig.path = 'figures/', cache = TRUE)
+ggplot2::theme_set(ggplot2::theme_bw())
 
-```{r Packages}
-suppressPackageStartupMessages(library(readr))
-suppressPackageStartupMessages(library(feather))
-suppressPackageStartupMessages(library(dplyr))
-suppressPackageStartupMessages(library(stringr))
+NRDR_MIN_HMM_COVERAGE = 0.9
+
+library(kfigr)
+library(readr)
+library(feather)
+library(dplyr)
+library(tidyr)
+library(stringr)
 library(ggplot2)
-library(tidyverse)
-library(RColorBrewer)
 ```
 
-```{r Load tables}
+```{r load-tables}
+# DL: We were going to use only representative genomes
 accessions <- read_feather("data/pfitmap-gtdb-RNRs.accessions.feather")
 # dbsources <- read_feather('data/pfitmap-gtdb-RNRs.dbsources.feather')
 # domains <- read_feather('data/pfitmap-gtdb-RNRs.domains.feather')
@@ -33,44 +37,34 @@ taxa <- read_feather('data/pfitmap-gtdb.taxa.feather')
 # domtblout <- read_feather('data/pfitmap-gtdb-RNRs.domtblout.feather')
 ```
 
-```{r all NrdRs table}
-MIN_HMM_COVERAGE = 0.9
-
+```{r nrdrs-table}
 nrdrs <- hmm_profiles %>%
   filter(psuperfamily == 'NrdR-superfamily') %>%
-  inner_join(proteins %>%
-               filter((hmm_to - hmm_from +1)/hmmlen >= MIN_HMM_COVERAGE)
-             , by = 'profile') %>%
-  inner_join(accessions %>% 
-            select(accno, genome_accno), 
-            by = 'accno') %>%
+  inner_join(proteins %>% filter((hmm_to - hmm_from + 1)/hmmlen >= NRDR_MIN_HMM_COVERAGE) , by = 'profile') %>%
+  inner_join(accessions %>%  select(accno, genome_accno),  by = 'accno') %>%
   inner_join(taxa, by = 'genome_accno') 
 ```
 
-```{r all RNR table}
-rnrs = hmm_profiles %>%
+```{r rnrs-table}
+rnrs <- hmm_profiles %>%
   filter(psuperfamily == 'NrdGRE') %>%
-  inner_join(proteins %>%
-               select(accno, profile), 
-             by = 'profile') %>%
-  inner_join(accessions %>% 
-            select(accno, genome_accno), 
-            by = 'accno') %>%
-  inner_join(taxa %>%
-               select(genome_accno, tdomain, tphylum, tclass, torder, tfamily, tgenus, tspecies), 
-             by = 'genome_accno') 
+  inner_join(proteins %>% select(accno, profile),  by = 'profile') %>%
+  inner_join(accessions %>%  select(accno, genome_accno),  by = 'accno') %>%
+  inner_join(taxa %>% select(genome_accno, tdomain, tphylum, tclass, torder, tfamily, tgenus, tspecies), by = 'genome_accno') 
 ```
 
-```{r Proportion of genomes with NrdR in domains of life}
-nrdr_freq = nrdrs %>%
+# Data
+
+DESCRIBE THE DATA, AND GIVE SOME SUMS. WORKS LIKE THIS (check the source code): 
+
+`r nrow(taxa)` genomes were searched and contained at least one RNR protein, i.e. enzyme components, NrdI and NrdR.
+
+```{r nrdrfreq-plot, fig.cap = "Proportion of genomes with NrdR in domains of life."}
+nrdr_freq <- nrdrs %>%
   distinct(tdomain, genome_accno) %>%
   group_by(tdomain) %>%
   summarise(nrdr_pres_count = n()) %>%
-  inner_join(taxa %>% 
-  group_by (tdomain) %>%
-  summarise (genome_count = n()),
-  by = 'tdomain'
-  ) %>%
+  inner_join(taxa %>%  group_by(tdomain) %>% summarise(genome_count = n()), by = 'tdomain') %>%
   mutate(proportion = nrdr_pres_count / genome_count)
 
 nrdr_freq %>% ggplot(aes(x=tdomain, y=genome_count, fill=nrdr_pres_count)) +
@@ -80,84 +74,96 @@ nrdr_freq %>% ggplot(aes(x=tdomain, y=genome_count, fill=nrdr_pres_count)) +
   guides(fill=guide_legend(title="NrdR presence in genomes"))
 ```
 
-```{r Genomes with NrdR in main taxonomic groups}
-###Choose domain of life and taxonomic level
-domain = 'Bacteria'
+# Results
+
+WRITE SOMETHING ABOUT WHAT YOU FIND IN THE PLOTS. REFER TO PLOTS AND TABLES WITH (check source code) `r figr('genomes-with-nrdr', T, type = 'Figure')`.
+
+```{r genomes-with-nrdr, fig.cap = "Genomes with NrdR in main taxonomic groups."}
+# Choose domain of life and taxonomic level
+# DL: This should be done with a function which is then called from individual chunks, one for each combination!
+domain <- 'Bacteria'
 # domain = 'Archaea'
-level = 'tphylum'
+level <- 'tphylum'
 # level = 'tclass'
 
-nrdr_by_level = nrdrs %>%
+nrdr_by_level <- nrdrs %>%
   filter(tdomain == domain) %>%
   group_by_at(level) %>%
   distinct(genome_accno) %>%
   summarise(nrdr_pres_count = n()) %>%
-  full_join(taxa %>%
-              filter(tdomain == domain) %>%
-              group_by_at(level) %>%
-              summarise (genome_count = n()),
-            by = level) %>%
-    replace_na(list(nrdr_pres_count = 0)) %>%
+  full_join(
+    taxa %>%
+      filter(tdomain == domain) %>%
+      group_by_at(level) %>%
+      summarise (genome_count = n()),
+    by = level
+  ) %>%
+  replace_na(list(nrdr_pres_count = 0)) %>%
   mutate(proportion = nrdr_pres_count / genome_count) 
 
-###Phyla with no nrdr or nrdr_genomes proportion < 0.01, no single genome phyla
+# Phyla with no nrdr or nrdr_genomes proportion < 0.01, no single genome phyla
 # low_nrdr_phyla = nrdr_by_level %>% filter(proportion < 0.01 & genome_count > 1)
 
-###Phyla with nrdr 
+# Phyla with nrdr 
 # high_nrdr_phyla = nrdr_by_level %>% filter(proportion > 0.7 & genome_count > 1)
 
-###Output a table to use with anvi'o
+# Output a table to use with anvi'o
+# DL: Better to do in a separate script only for this purpose. I think this should
+#   be made with `make` as part of the building of the project and the resulting
+#   table read by this Rmd.
 # nrdr_by_level %>%
 #   write_tsv(sprintf("./NrdR_proportions_in_%s_%s.tsv", domain, level))
  
- ###Plotting 
+# Plotting 
 nrdr_by_level %>% 
   filter(genome_count > 1) %>%
   ggplot(aes_string(x=level, y="genome_count", fill="proportion")) +
   geom_bar(stat="identity") +
-    scale_fill_gradient(low = "pink", high = "purple", na.value = NA) +
+  scale_fill_gradient(low = "pink", high = "purple", na.value = NA) +
   ylab('Number of genomes') +
   xlab(sprintf('%s %s', domain, level)) +
-   scale_y_log10() +
+  scale_y_log10() +
   guides(fill=guide_legend(title="Proportion of genomes with NrdR")) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-```{r NrdR presence with single RNR}
-
-nrdr_srnr = rnrs %>% 
-      group_by(genome_accno) %>% 
-      mutate (rnrs_by_genome = n()) %>%
-      filter(rnrs_by_genome == 1) %>%
-  inner_join(nrdrs %>% 
-               transmute(genome_accno, NrdR_accno = accno), 
-             by = 'genome_accno') %>%
+```{r nrdr-with-single-rnr, fig.cap = "NrdR presence with single RNR"}
+nrdr_srnr <- rnrs %>% 
+  group_by(genome_accno) %>% 
+  mutate (rnrs_by_genome = n()) %>%
+  filter(rnrs_by_genome == 1) %>%
+  inner_join(nrdrs %>% transmute(genome_accno, NrdR_accno = accno), by = 'genome_accno') %>%
 ##124 genomes had more than one NrdR
+  # DL: The above kind of fact should go in the running text outside code blocks (inserted with inline code, i.e. within `r `).
   distinct(genome_accno, profile, accno, tdomain, tphylum, tclass, torder, tfamily, tgenus, tspecies) 
     
-###Proportion of nrdr with single RNR in the genome (tibble output)
-domain = 'Archaea'
-level = 'tphylum'
+# Proportion of nrdr with single RNR in the genome (tibble output)
+# DL: Again, create a function and call with the different values you want, each within its own chunk.
+domain <- 'Archaea'
+level <- 'tphylum'
 
-nrdr_srnr_prop = nrdr_srnr %>%
+nrdr_srnr_prop <- nrdr_srnr %>%
   filter(tdomain == domain) %>%
   group_by_at(level) %>%
   mutate(count = n()) %>%
-  inner_join(taxa %>%
-              group_by_at(level)%>%
-              summarize(genome_by_level = n()),
-            by = level) %>%
+  inner_join(
+    taxa %>%
+      group_by_at(level)%>%
+      summarize(genome_by_level = n()),
+    by = level
+  ) %>%
   mutate(proportion = count / genome_by_level) 
 
+# DL: Don't do table output and plot in the same chunk
 nrdr_srnr_prop %>% 
   distinct_at(level) %>%
   inner_join(nrdr_srnr_prop %>% select(proportion) %>% distinct(proportion), by = level)
   
-###Plot proportion of NrdR with single RNR on genome by taxonomic level
-
+# Plot proportion of NrdR with single RNR on genome by taxonomic level
+sublevel <- '' # DL: What should this be set to?
 nrdr_srnr_prop %>% 
   filter(tdomain == domain) %>%
- filter(genome_by_level > 1) %>%
+  filter(genome_by_level > 1) %>%
   distinct(tphylum, count, tdomain) %>%
   ggplot(aes_string(x="tdomain", y="count", fill=level)) +
   geom_bar(stat="identity") +
@@ -167,37 +173,33 @@ nrdr_srnr_prop %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
   
-```{r NrdR presence with multiple RNR}
-
-nrdr_mrnr = rnrs %>% 
-      group_by(genome_accno) %>% 
-      mutate (rnrs_by_genome = n()) %>%
-      filter(rnrs_by_genome > 1) %>%
-  inner_join(nrdrs %>% 
-               transmute(genome_accno, NrdR_accno = accno), 
-             by = 'genome_accno') %>%
-##294 genomes had more than one NrdR
+```{r nrdr-with-multiple-rnrs, fig.cap = "NrdR presence with multiple RNR"}
+nrdr_mrnr <- rnrs %>% 
+  group_by(genome_accno) %>% 
+  mutate (rnrs_by_genome = n()) %>%
+  filter(rnrs_by_genome > 1) %>%
+  inner_join(nrdrs %>%  transmute(genome_accno, NrdR_accno = accno),  by = 'genome_accno') %>%
   distinct(genome_accno, profile, accno, tdomain, tphylum, tclass, torder, tfamily, tgenus, tspecies) 
+##294 genomes had more than one NrdR
+# DL: In the running text, see above
     
-###Proportion of nrdr with multiple RNR in the genome (tibble output)
-domain = 'Archaea'
-level = 'tphylum'
+# Proportion of nrdr with multiple RNR in the genome (tibble output)
+domain <- 'Archaea'
+level <- 'tphylum'
 
-nrdr_mrnr_prop = nrdr_mrnr %>%
+nrdr_mrnr_prop <- nrdr_mrnr %>%
   filter(tdomain == domain) %>%
   group_by_at(level) %>%
   mutate(count = n()) %>%
-  inner_join(taxa %>%
-              group_by_at(level)%>%
-              summarize(genome_by_level = n()),
-            by = level) %>%
+  inner_join(taxa %>% group_by_at(level)%>% summarize(genome_by_level = n()), by = level) %>%
   mutate(proportion = count / genome_by_level) 
 
+# DL: No table output with plots
 nrdr_mrnr_prop %>% 
   distinct_at(level) %>%
   inner_join(nrdr_mrnr_prop %>% select(proportion) %>% distinct(proportion), by = level)
   
-###Plot proportion of NrdR with multiple RNR on genome by taxonomic level
+# Plot proportion of NrdR with multiple RNR on genome by taxonomic level
 
 nrdr_mrnr_prop %>% 
   filter(tdomain == domain) %>%
@@ -211,13 +213,13 @@ nrdr_mrnr_prop %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
   
-```{r NrdR presence with multiple RNR/different classes}
+```{r nrdr-with-different-classes, fig.cap = "NrdR presence with multiple RNR/different classes"}
+# Proportion of nrdr with multiple RNR in the genome (tibble output) but from different RNR classes 
+# DL: Again, do a function
+domain <- 'Archaea'
+level <- 'tphylum'
 
-###Proportion of nrdr with multiple RNR in the genome (tibble output) but from different RNR classes 
-domain = 'Archaea'
-level = 'tphylum'
-
-nrdr_drnr = nrdr_mrnr %>%
+nrdr_drnr <- nrdr_mrnr %>%
   inner_join(hmm_profiles %>% select(profile, pclass), by = 'profile') %>%
   filter(tdomain == domain) %>%
   group_by(genome_accno) %>%
@@ -225,21 +227,24 @@ nrdr_drnr = nrdr_mrnr %>%
   ungroup %>%
   distinct(genome_accno, tphylum, pclass, pcount) %>%
   pivot_wider(names_from = pclass, values_from = pcount)
-nrdr_drnr = nrdr_drnr %>% mutate(na_count = rowSums(is.na(nrdr_drnr))) %>%
+  nrdr_drnr = nrdr_drnr %>% mutate(na_count = rowSums(is.na(nrdr_drnr))) %>%
   filter(na_count < 2)
 
-###Occurence of Nrdr with each rnr class combination
+# Occurence of Nrdr with each rnr class combination
+# DL: This can be simplified!
 nrdr_drnr %>%
   filter(is.na(NrdD)) %>%
   group_by_at(level) %>%
   mutate(NrdAJ = n()) %>%
   distinct(tphylum, NrdAJ) %>%
-  full_join(nrdr_drnr %>%
-               filter(is.na(NrdJ)) %>%
-               group_by_at(level) %>%
-               mutate(NrdAD = n()) %>%
-              distinct(tphylum, NrdAD),
-             by = level) %>%
+  full_join(
+    nrdr_drnr %>%
+      filter(is.na(NrdJ)) %>%
+      group_by_at(level) %>%
+      mutate(NrdAD = n()) %>%
+      distinct(tphylum, NrdAD),
+    by = level
+  ) %>%
   full_join(nrdr_drnr %>%
                filter(is.na(NrdA)) %>%
                group_by_at(level) %>%
@@ -251,35 +256,28 @@ nrdr_drnr %>%
               summarize(genome_by_level = n()),
             by = level) %>%
   mutate(NrdAJ_prop = NrdAJ / genome_by_level, NrdAD_prop = NrdAD / genome_by_level, NrdDJ_prop = NrdJD / genome_by_level) 
-
 ```
   
-```{r NrdR in Archaea with class I RNR}
-level = 'tphylum'
+```{r nrdr-in-archaea-w-nrda, fig.cap = "NrdR in Archaea with class I RNR"}
+level <- 'tphylum'
 
-###NrdR+NrdA combination existed in one Archaeal class in each of the three phyla that had this combination (i.e. looking at phylum level, no variability by tclass was found, so we checked by torder)
-sublevel = 'torder'
+# NrdR+NrdA combination existed in one Archaeal class in each of the three phyla that had this combination (i.e. looking at phylum level, no variability by tclass was found, so we checked by torder)
+sublevel <- 'torder'
 
-nrdr_nrda = nrdrs %>%
-    filter(tdomain == 'Archaea') %>%
+nrdr_nrda <- nrdrs %>%
+  filter(tdomain == 'Archaea') %>%
   select(genome_accno, level, sublevel, tspecies) %>%
-  semi_join(rnrs %>% 
-###We are supposing genomes with NrdA to have fully functional class I RNR without checking for NrdB subunit 
-               filter(pclass == 'NrdA'), 
-             by = 'genome_accno') %>%
+  semi_join(rnrs %>% filter(pclass == 'NrdA'), by = 'genome_accno') %>%
   group_by_at(level) %>%
   mutate(count= n()) %>%
-  inner_join(taxa %>%
-              group_by_at(level)%>%
-              summarize(genome_by_level = n()),
-            by = level) %>%
+  inner_join(taxa %>% group_by_at(level)%>% summarize(genome_by_level = n()), by = level) %>%
   mutate(proportion = count/genome_by_level) 
 
-###Proportion of genomes with NrdR and NrdA by phylum
-nrdr_nrda %>%
-  distinct(tphylum, count, proportion)
+# Proportion of genomes with NrdR and NrdA by phylum
+# DL: Don't mix table and figure output in the same chunk.
+nrdr_nrda %>% distinct(tphylum, count, proportion)
 
-###Plotting NrdR + class I RNR combination by taxonomic level
+# Plotting NrdR + class I RNR combination by taxonomic level
 nrdr_nrda %>% 
   distinct(tphylum, torder, count, genome_by_level, proportion) %>%
   # filter(genome_by_level > 1) %>%
@@ -291,12 +289,11 @@ nrdr_nrda %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
   
-```{r Presence of NrdR with RNR on the same strand/operon}
+```{r nrdr-w-rnr-on-same-strand, fig.cap = "Presence of NrdR with RNR on the same strand/operon"}
 
 ```
   
-```{r NrdR paralogs}
+```{r nrdr-paralogs, fig.cap = "NrdR paralogs"}
 
 ```
-  
-  
+

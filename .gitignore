@@ -1,3 +1,5 @@
 .*.sw?
 .Rproj.user
 .Rhistory
+*.html
+*_cache
