@@ -66,20 +66,19 @@ rnr_class_combs <- rnrs %>% distinct(genome_accno, pclass) %>%
 
 DESCRIBE THE DATA, AND GIVE SOME SUMS. WORKS LIKE THIS (check the source code): 
 
-`r nrow(taxa)` genomes were searched and contained at least one RNR protein, i.e. enzyme components, NrdI and NrdR.
+`r nrow(taxa)` genomes were searched and contained at least one RNR protein, i.e. enzyme components, NrdI or NrdR.
 
 ```{r nrdrfreq-plot, fig.cap = "Proportion of genomes with NrdR in domains of life."}
-nrdr_freq <- nrdrs %>%
+nrdrs %>%
   distinct(tdomain, genome_accno) %>%
   group_by(tdomain) %>%
   summarise(nrdr_pres_count = n()) %>%
-  inner_join(taxa %>%  group_by(tdomain) %>% summarise(genome_count = n()), by = 'tdomain') %>%
-  mutate(proportion = nrdr_pres_count / genome_count)
-
-nrdr_freq %>% ggplot(aes(x=tdomain, y=genome_count, fill=nrdr_pres_count)) +
+  inner_join(taxa %>% group_by(tdomain) %>% summarise(genome_count = n()), by = 'tdomain') %>%
+  mutate(proportion = nrdr_pres_count / genome_count) %>%
+  ggplot(aes(x=tdomain, y=genome_count, fill=nrdr_pres_count)) +
   geom_bar(stat="identity")+ 
-  ylab('Domain of life') +
-  xlab('Number of genoems') +
+  xlab('Domain of life') +
+  ylab('Number of genomes') +
   guides(fill=guide_legend(title="NrdR presence in genomes"))
 ```
 
