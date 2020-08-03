@@ -80,6 +80,33 @@ of archaeal species code for NrdR.
 
 WRITE SOMETHING ABOUT WHAT YOU FIND IN THE PLOTS. REFER TO PLOTS AND TABLES WITH (check source code) `r figr('genomes-with-nrdr', T, type = 'Figure')`.
 
+```{r nrdrs-per-taxon-level-func}
+# Ghada simplifies so function only takes domain. Remember to change name of function.
+nrdrs_per_taxon_level <- function(domain, level) {
+  nrdrs %>%
+    filter(tdomain == domain) %>%
+    group_by_at(level) %>%
+    distinct(genome_accno) %>% 
+    summarise(nrdr_pres_count = n(), .groups = 'drop') %>%
+    full_join(
+      taxa %>%
+        filter(tdomain == domain) %>%
+        group_by_at(level) %>%
+        summarise(genome_count = n(), .groups = 'drop'),
+      by = level
+    ) %>%
+    replace_na(list(nrdr_pres_count = 0)) %>%
+    mutate(proportion = nrdr_pres_count / genome_count) 
+  
+  # Ghada finishes the plot...
+}
+```
+
+```{r bacterial-nrdrs-per-phylum}
+nrdrs_per_taxon_level('Bacteria', 'tphylum')
+```
+
+
 ```{r genomes-with-nrdr, fig.cap = "Genomes with NrdR in main taxonomic groups."}
 # Choose domain of life and taxonomic level
 # DL: This should be done with a function which is then called from individual chunks, one for each combination!
