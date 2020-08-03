@@ -72,8 +72,8 @@ DESCRIBE THE DATA, AND GIVE SOME SUMS. WORKS LIKE THIS (check the source code):
 nrdrs %>%
   distinct(tdomain, genome_accno) %>%
   group_by(tdomain) %>%
-  summarise(nrdr_pres_count = n(), .groups = 'drop') %>%
-  inner_join(taxa %>% group_by(tdomain) %>% summarise(genome_count = n(), .groups = 'drop'), by = 'tdomain') %>%
+  count(tdomain, name = 'nrdr_pres_count') %>% 
+  inner_join(taxa %>% count(tdomain, name = 'genome_count'), by = 'tdomain') %>%
   mutate(proportion = nrdr_pres_count / genome_count) %>%
   ggplot(aes(x=tdomain, y=genome_count, fill=nrdr_pres_count)) +
   geom_bar(stat="identity")+ 
@@ -97,7 +97,7 @@ level <- 'tphylum'
 nrdr_by_level <- nrdrs %>%
   filter(tdomain == domain) %>%
   group_by_at(level) %>%
-  distinct(genome_accno) %>% # NEXT
+  distinct(genome_accno) %>% 
   summarise(nrdr_pres_count = n(), .groups = 'drop') %>%
   full_join(
     taxa %>%
