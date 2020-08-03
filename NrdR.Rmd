@@ -56,6 +56,7 @@ rnrs <- hmm_profiles %>%
 ```
 
 ```{r rnr-class-combs}
+# This creates a table with RNR class combinations per genome
 rnr_class_combs <- rnrs %>% distinct(genome_accno, pclass) %>%
   pivot_wider(names_from = pclass, values_from = pclass) %>%
   unite(class_comb, NrdA, NrdD, NrdJ, sep = ':', na.rm = TRUE)
