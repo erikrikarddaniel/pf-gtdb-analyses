@@ -55,6 +55,12 @@ rnrs <- hmm_profiles %>%
   inner_join(taxa %>% select(genome_accno, tdomain, tphylum, tclass, torder, tfamily, tgenus, tspecies), by = 'genome_accno') 
 ```
 
+```{r rnr-class-combs}
+rnr_class_combs <- rnrs %>% distinct(genome_accno, pclass) %>%
+  pivot_wider(names_from = pclass, values_from = pclass) %>%
+  unite(class_comb, NrdA, NrdD, NrdJ, sep = ':', na.rm = TRUE)
+```
+
 # Data
 
 DESCRIBE THE DATA, AND GIVE SOME SUMS. WORKS LIKE THIS (check the source code): 
