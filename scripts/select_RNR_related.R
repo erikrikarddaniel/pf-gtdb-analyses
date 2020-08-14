@@ -8,48 +8,58 @@
 # Author: daniel.lundin@dbb.su.se, nouairia.ghada@gmail.com
 suppressPackageStartupMessages(library(readr))
 suppressPackageStartupMessages(library(feather))
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(dtplyr))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(stringr))
 
 prefix = commandArgs(trailingOnly=TRUE)
 
-write(sprintf("\tReading feather files prefixed with '%s'", prefix), stderr())
-accessions <- read_feather(sprintf("%s.accessions.feather", prefix))
-hmm_profiles <- read_feather("pfitmap-gtdb.hmm_profiles.feather")
-domains <- read_feather(sprintf("%s.domains.feather", prefix))
-proteins <- read_feather(sprintf("%s.proteins.feather", prefix))
-sequences <- read_feather(sprintf("%s.sequences.feather", prefix))
-tblout <- read_feather(sprintf("%s.tblout.feather", prefix))
-domtblout <- read_feather(sprintf("%s.domtblout.feather", prefix))
+write(sprintf("\tReading feather files prefixed with '%s', subsetting tables to RNR protein entries, writing to feather files prefixed with 'pfitmap-gtdb-rep'", prefix), stderr())
+hmm_profiles <- read_feather("pfitmap-gtdb.hmm_profiles.feather") %>% as.data.table()
+proteins <- read_feather(sprintf("%s.proteins.feather", prefix)) %>% as.data.table()
 
-write("\tSubsetting tables to RNR protein entries, writing to feather files prefixed with 'pfitmap-gtdb-rep'", stderr())
-rnrs = hmm_profiles %>% 
-  inner_join(proteins, by = 'profile') %>%
+rnrs = hmm_profiles %>% lazy_dt() %>%
+  inner_join(lazy_dt(proteins), by = 'profile') %>%
   filter(psuperfamily %in% c('Ferritin-like', 'NrdGRE', 'Flavodoxin superfamily', 'NrdR-superfamily')) %>%
-  select(accno, profile)
+  select(accno, profile) %>%
+  as.data.table()
 
-proteins %>% 
-  inner_join(rnrs %>% select (accno), by = 'accno') %>%
+proteins %>% lazy_dt() %>%
+  inner_join(lazy_dt(rnrs) %>% select (accno), by = 'accno') %>%
+  as.data.table() %>%
   write_feather(sprintf("%s-RNRs.proteins.feather", prefix))
+write("	  --> proteins written", stderr())
+rm(proteins)
 
-accessions %>% 
-  inner_join(rnrs %>% select (accno), by = 'accno') %>%
+read_feather(sprintf("%s.accessions.feather", prefix)) %>% as.data.table() %>% lazy_dt() %>%
+  inner_join(lazy_dt(rnrs) %>% select (accno), by = 'accno') %>%
+  as.data.table() %>%
   write_feather(sprintf("%s-RNRs.accessions.feather", prefix))
+write("	  --> accessions written", stderr())
 
-domains %>% 
-  inner_join(rnrs, by = c('accno', 'profile')) %>%
+read_feather(sprintf("%s.domains.feather", prefix)) %>% as.data.table() %>% lazy_dt() %>%
+  inner_join(lazy_dt(rnrs), by = c('accno', 'profile')) %>%
+  as.data.table() %>%
   write_feather(sprintf("%s-RNRs.domains.feather", prefix))
+write("	  --> domains written", stderr())
   
-sequences %>%
-  inner_join(rnrs %>% select (accno), by = 'accno') %>%
+read_feather(sprintf("%s.sequences.feather", prefix)) %>% as.data.table() %>% lazy_dt() %>%
+  inner_join(lazy_dt(rnrs) %>% select (accno), by = 'accno') %>%
+  as.data.table() %>%
   write_feather(sprintf("%s-RNRs.sequences.feather", prefix))
+write("	  --> sequences written", stderr())
 
-tblout %>% 
-  inner_join(rnrs, by = c('accno', 'profile')) %>%
+read_feather(sprintf("%s.tblout.feather", prefix)) %>% as.data.table() %>% lazy_dt() %>%
+  inner_join(lazy_dt(rnrs), by = c('accno', 'profile')) %>%
+  as.data.table() %>%
   write_feather(sprintf("%s-RNRs.tblout.feather", prefix))
+write("	  --> tblout written", stderr())
 
-domtblout %>%
-  inner_join(rnrs, by = c('accno', 'profile')) %>%
+read_feather(sprintf("%s.domtblout.feather", prefix)) %>% as.data.table() %>% lazy_dt() %>%
+  inner_join(lazy_dt(rnrs), by = c('accno', 'profile')) %>%
+  as.data.table() %>%
   write_feather(sprintf("%s-RNRs.domtblout.feather", prefix))
+write("	  --> domtblout written", stderr())
 
 write("\tDone", stderr())
