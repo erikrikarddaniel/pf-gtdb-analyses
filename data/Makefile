@@ -1,8 +1,8 @@
 SOURCE_DIR = sequoia:/data/gtdb_pfitmap/results/
 
 all:
-	rsync -avhLP --size-only $(SOURCE_DIR)/*.feather ./.
-	rsync -avhLP --size-only $(SOURCE_DIR)/gtdb_metadata.tsv ./.
+	rsync -avhLP --size-only $(SOURCE_DIR)/classification/*.feather ./.
+	rsync -avhLP --size-only $(SOURCE_DIR)/metadata/gtdb_metadata.tsv ./.
 	make subset_reps
 	make subset_rnrs_gtdb 
 	make subset_rnrs_reps
