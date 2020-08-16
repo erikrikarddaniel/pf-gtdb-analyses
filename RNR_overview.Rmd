@@ -1,0 +1,90 @@
+---
+title: "Overview of RNR proteins in GTDB *species*"
+author: "daniel.lundin@dbb.su.se & ghada.nouaria@dbb.su.se"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: true
+    code_folding: hide
+  pdf_document:
+    fig_caption: yes
+    fig_height: 9
+    fig_width: 8
+    number_sections: yes
+    toc: yes
+---
+
+```{r setup, echo=F, cache = FALSE}
+knitr::opts_chunk$set(echo=F, fig.path='figures/', cache = TRUE)
+ggplot2::theme_set(ggplot2::theme_bw())
+```
+
+```{r libraries, message=F, cache = FALSE}
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(feather))
+#suppressPackageStartupMessages(library(data.table))
+#suppressPackageStartupMessages(library(dtplyr))
+suppressPackageStartupMessages(library(dplyr, warn.conflicts = FALSE))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(kfigr))
+suppressPackageStartupMessages(library(knitr))
+```
+
+```{r constants}
+```
+
+```{r read-data}
+dbsources    <- read_feather("data/pfitmap-gtdb.dbsources.feather")
+hmm_profiles <- read_feather("data/pfitmap-gtdb.hmm_profiles.feather")
+taxa         <- read_feather("data/pfitmap-gtdb-rep.taxa.feather")
+accessions   <- read_feather("data/pfitmap-gtdb-rep-RNRs.accessions.feather")
+### domains      <- read_feather("data/pfitmap-gtdb-rep-RNRs.domains.feather")
+proteins     <- read_feather("data/pfitmap-gtdb-rep-RNRs.proteins.feather")
+### sequences    <- read_feather("data/pfitmap-gtdb-rep-RNRs.sequences.feather")
+
+# Convenience tables and numbers
+rnr_alphas <- hmm_profiles %>% filter(pclass %in% c('NrdA', 'NrdD', 'NrdJ'))
+
+n_rnr_species <- rnr_alphas %>%
+  inner_join(proteins %>% select(profile, accno), by = 'profile') %>% 
+  inner_join(accessions %>% distinct(accno, genome_accno), by = 'accno') %>% 
+  distinct(genome_accno) %>% count() %>% pull(n)
+```
+
+# Data
+
+The data in this document was based on a search for RNR proteins in  `r nrow(taxa)` 
+species in the  `r dbsources %>% pull(version)`  release of the GTDB database. The
+GTDB database only contains Archaea and Bacteria.
+
+# RNR presence in genomes
+
+Of these species, `r n_rnr_species` contained at least one catalytic subunit protein, i.e.
+`r round(n_rnr_species/nrow(taxa)*100)`%. 
+Genome completeness
+does not seem to be a major factor in explaining the absence of RNR catalytic subunits
+(`r figr('missing-rnr-completeness', T, type = 'Figure')`).
+
+```{r missing-rnr-completeness, fig.height = 4, fig.cap = 'Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.'}
+taxa %>% transmute(
+  genome_accno, 
+  tdomain, 
+  completeness = as.numeric(checkm_completeness),
+  compl_interval = ceiling(completeness / 5) * 5
+) %>%
+  anti_join(
+    rnr_alphas %>% inner_join(proteins, by = 'profile') %>% inner_join(accessions, by = 'accno'),
+    by = 'genome_accno'
+  ) %>%
+  count(tdomain, compl_interval) %>%
+  ggplot(aes(x = compl_interval, y = n, fill = tdomain)) +
+  geom_col() +
+  scale_fill_discrete('Domain') +
+  ylab('N. genomes without RNR') + xlab('Completeness percent intervall')
+```
+
