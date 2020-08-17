@@ -50,6 +50,25 @@ proteins     <- read_feather("data/pfitmap-gtdb-rep-RNRs.proteins.feather")
 # Convenience tables and numbers
 rnr_alphas <- hmm_profiles %>% filter(pclass %in% c('NrdA', 'NrdD', 'NrdJ'))
 
+major_phyla <- taxa %>% 
+  count(tdomain, tphylum, name = "n_genomes") %>% 
+  group_by(tdomain) %>% top_n(11, n_genomes) %>% ungroup() %>%
+  mutate(major_phylum = tphylum)
+major_phyla <- major_phyla %>% 
+  union(
+    taxa %>% anti_join(major_phyla, by = c('tdomain', 'tphylum')) %>%
+      count(tdomain, tphylum, major_phylum = NA, name = "n_genomes")
+  ) %>%
+  mutate(major_phylum = forcats::fct_explicit_na(major_phylum, na_level = 'Other phyla'))
+
+genomes_wo_rnr_alpha <- taxa %>% 
+  select(genome_accno, tdomain:tspecies) %>%
+  anti_join(
+    rnr_alphas %>% inner_join(proteins, by = 'profile') %>%
+      inner_join(accessions, by = 'accno'),
+    by = "genome_accno"
+  ) 
+
 n_rnr_species <- rnr_alphas %>%
   inner_join(proteins %>% select(profile, accno), by = 'profile') %>% 
   inner_join(accessions %>% distinct(accno, genome_accno), by = 'accno') %>% 
@@ -73,6 +92,9 @@ Nor does different requirements for how much of the HMM model is covered by alig
 the number of genomes with at least one RNR alpha subunit
 (`r figr("num-genomes-hmm-coverage", T, type = "Figure")`).
 
+In many phyla around 10-30% of species lack identified RNR alpha subunits
+(`r figr("no-rnr-alpha-phylum-dist", T, type = "Figure")`).
+
 ```{r missing-rnr-completeness, fig.height = 4, fig.cap = '**Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.**'}
 taxa %>% transmute(
   genome_accno, 
@@ -91,7 +113,7 @@ taxa %>% transmute(
   ylab('N. genomes without RNR') + xlab('Completeness percent intervall')
 ```
 
-```{r num-genomes-hmm-coverage, fig.height = 4, fig.cap = "**Number of genomes with at least one RNR catalytic subunit as a function of different degrees of HMM model coverage.** Although the number of genomes appear to decrease radically between 0.85 and 0.9, note that the y-axis scale is very short."}
+```{r num-genomes-hmm-coverage, fig.height = 4, fig.cap = "**Number of genomes with at least one RNR catalytic subunit as a function of different degrees of HMM model coverage.** Although the number of genomes appear to decrease radically between 0.85 and 0.9, note that the y-axis scale is very short and that it's actually only about 250 species that lose their RNRs between these levels."}
 tibble(min_hmm_coverage = c(0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.00)) %>%
   mutate(
     n_genomes = purrr::map(
@@ -110,5 +132,20 @@ tibble(min_hmm_coverage = c(0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0
   geom_line() +
   xlab('Minimum HMM model coverage') +
   ylab('Number of genomes with at least on RNR alpha subunit')
+```
+
+```{r no-rnr-alpha-phylum-dist, fig.height = 5, fig.cap = "**Species missing RNR alpha subunits per phylum.** The top two panels show the number of species that do not encode any identified RNR alpha subunit, while the bottom two show the proportion of species per phylum that do not encode RNR alphas."}
+genomes_wo_rnr_alpha %>%
+  count(tdomain, tphylum) %>%
+  inner_join(major_phyla, by = c('tdomain', 'tphylum')) %>%
+  group_by(tdomain, major_phylum) %>% summarise(n = sum(n), n_genomes = sum(n_genomes), .groups = 'drop') %>%
+  transmute(tdomain, major_phylum, `Proportion of genomes` = n/n_genomes, `Number of genomes` = n) %>%
+  pivot_longer(c(`Proportion of genomes`, `Number of genomes`), names_to = 'type', values_to = 'meas') %>%
+  ggplot(aes(x = major_phylum, y = meas)) +
+  geom_col() +
+  facet_wrap(type~tdomain, scales = 'free') +
+  coord_flip() +
+  xlab("Phylum") +
+  ylab("Number or proportion of species missing RNR alpha subunits")
 ```
 
