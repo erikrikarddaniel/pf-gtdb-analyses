@@ -17,7 +17,7 @@ output:
 ---
 
 ```{r setup, echo=F, cache = FALSE}
-knitr::opts_chunk$set(echo=F, fig.path='figures/', cache = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.path='figures/', cache = TRUE)
 ggplot2::theme_set(ggplot2::theme_bw())
 ```
 
@@ -46,7 +46,9 @@ taxa         <- read_feather("data/pfitmap-gtdb-rep.taxa.feather") %>%
     checkm_completeness = as.numeric(checkm_completeness),
     checkm_contamination = as.numeric(checkm_contamination),
     checkm_strain_heterogeneity = as.numeric(checkm_strain_heterogeneity),
-    genome_size = as.numeric(genome_size)
+    genome_size = as.numeric(genome_size),
+    est_genome_size = genome_size/checkm_completeness*100,
+    genome_size_class = ceiling(est_genome_size/1e6)
   )
 accessions   <- read_feather("data/pfitmap-gtdb-rep-RNRs.accessions.feather")
 ### domains      <- read_feather("data/pfitmap-gtdb-rep-RNRs.domains.feather")
@@ -119,7 +121,7 @@ the number of genomes with at least one RNR alpha subunit
 In many phyla around 10-30% of species lack identified RNR alpha subunits
 (`r figr("no-rnr-alpha-phylum-dist", T, type = "Figure")`).
 
-```{r missing-rnr-completeness, fig.height = 4, fig.cap = '**Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.**'}
+```{r missing-rnr-completeness, fig.height = 3, fig.cap = '**Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.**'}
 taxa %>% transmute(
   genome_accno, 
   tdomain, 
@@ -137,7 +139,7 @@ taxa %>% transmute(
   ylab('N. genomes without RNR') + xlab('Completeness percent intervall')
 ```
 
-```{r num-genomes-hmm-coverage, fig.height = 4, fig.cap = "**Number of genomes with at least one RNR catalytic subunit as a function of different degrees of HMM model coverage.** Although the number of genomes appear to decrease radically between 0.85 and 0.9, note that the y-axis scale is very short and that it's actually only about 250 species that lose their RNRs between these levels."}
+```{r num-genomes-hmm-coverage, fig.height = 3, fig.cap = "**Number of genomes with at least one RNR catalytic subunit as a function of different degrees of HMM model coverage.** Although the number of genomes appear to decrease radically between 0.85 and 0.9, note that the y-axis scale is very short and that it's actually only about 250 species that lose their RNRs between these levels."}
 tibble(min_hmm_coverage = c(0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.00)) %>%
   mutate(
     n_genomes = purrr::map(
@@ -229,19 +231,10 @@ combinations
 
 ```{r rnr-combs-genome_size, fig.height = 6, fig.cap = "**Presence of combinations of RNR classes in genome size classes.** Proportions do not reach 1 because genomes without identified RNRs were included in the total."}
 rnr_class_combs %>%
-  mutate(
-    est_genome_size = genome_size/checkm_completeness*100,
-    genome_size_class = ceiling(est_genome_size/1e6)
-  ) %>%
   filter(genome_size_class <= 20) %>%
   count(tdomain, rnr_combination, genome_size_class, name = "n_species_per_comb") %>%
   inner_join(
-    taxa %>%
-      mutate(
-        est_genome_size = genome_size/checkm_completeness*100,
-        genome_size_class = ceiling(est_genome_size/1e6)
-      ) %>%
-      count(tdomain, genome_size_class, name = "n_species"),
+    taxa %>% count(tdomain, genome_size_class, name = "n_species"),
     by = c('tdomain', 'genome_size_class')
   ) %>%
   transmute(
