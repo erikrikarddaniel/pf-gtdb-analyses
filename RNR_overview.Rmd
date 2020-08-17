@@ -46,13 +46,14 @@ accessions   <- read_feather("data/pfitmap-gtdb-rep-RNRs.accessions.feather")
 ### domains      <- read_feather("data/pfitmap-gtdb-rep-RNRs.domains.feather")
 proteins     <- read_feather("data/pfitmap-gtdb-rep-RNRs.proteins.feather")
 ### sequences    <- read_feather("data/pfitmap-gtdb-rep-RNRs.sequences.feather")
-
+```
+```{r tables-and-numbers}
 # Convenience tables and numbers
 rnr_alphas <- hmm_profiles %>% filter(pclass %in% c('NrdA', 'NrdD', 'NrdJ'))
 
 major_phyla <- taxa %>% 
   count(tdomain, tphylum, name = "n_genomes") %>% 
-  group_by(tdomain) %>% top_n(11, n_genomes) %>% ungroup() %>%
+  group_by(tdomain) %>% top_n(20, n_genomes) %>% ungroup() %>%
   mutate(major_phylum = tphylum)
 major_phyla <- major_phyla %>% 
   union(
@@ -73,6 +74,21 @@ n_rnr_species <- rnr_alphas %>%
   inner_join(proteins %>% select(profile, accno), by = 'profile') %>% 
   inner_join(accessions %>% distinct(accno, genome_accno), by = 'accno') %>% 
   distinct(genome_accno) %>% count() %>% pull(n)
+
+rnr_class_combs <- rnr_alphas %>%
+  inner_join(proteins, by = 'profile') %>%
+  inner_join(accessions, by = 'accno') %>%
+  distinct(genome_accno, pclass) %>%
+  pivot_wider(names_from = pclass, values_from = pclass) %>%
+  unite(rnr_combination, NrdA, NrdD, NrdJ, sep = ':', na.rm = TRUE) %>%
+  mutate(
+    rnr_combination = factor(
+      rnr_combination,
+      levels = c('NrdA', 'NrdJ', 'NrdD', 'NrdA:NrdJ', 'NrdA:NrdD', 'NrdD:NrdJ', 'NrdA:NrdD:NrdJ'),
+      ordered = TRUE
+    )
+  ) %>%
+  inner_join(taxa, by = 'genome_accno')
 ```
 
 # Data
@@ -81,7 +97,9 @@ The data in this document was based on a search for RNR proteins in  `r nrow(tax
 species in the  `r dbsources %>% pull(version)`  release of the GTDB database. The
 GTDB database only contains Archaea and Bacteria.
 
-# RNR presence in genomes
+# RNR presence in species
+
+## Species lacking RNR alpha subunits
 
 Of a total of `r nrow(taxa)` species,
 `r n_rnr_species` contained at least one catalytic subunit RNR protein, i.e.
@@ -134,18 +152,63 @@ tibble(min_hmm_coverage = c(0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0
   ylab('Number of genomes with at least on RNR alpha subunit')
 ```
 
-```{r no-rnr-alpha-phylum-dist, fig.height = 5, fig.cap = "**Species missing RNR alpha subunits per phylum.** The top two panels show the number of species that do not encode any identified RNR alpha subunit, while the bottom two show the proportion of species per phylum that do not encode RNR alphas."}
+```{r no-rnr-alpha-phylum-dist, fig.height = 7, fig.cap = "**Species missing RNR alpha subunits per phylum.** The top two panels show the number of species that do not encode any identified RNR alpha subunit, while the bottom two show the proportion of species per phylum that do not encode RNR alphas."}
 genomes_wo_rnr_alpha %>%
   count(tdomain, tphylum) %>%
   inner_join(major_phyla, by = c('tdomain', 'tphylum')) %>%
   group_by(tdomain, major_phylum) %>% summarise(n = sum(n), n_genomes = sum(n_genomes), .groups = 'drop') %>%
-  transmute(tdomain, major_phylum, `Proportion of genomes` = n/n_genomes, `Number of genomes` = n) %>%
-  pivot_longer(c(`Proportion of genomes`, `Number of genomes`), names_to = 'type', values_to = 'meas') %>%
+  transmute(tdomain, major_phylum, `Proportion of species` = n/n_genomes, `Number of species` = n) %>%
+  pivot_longer(c(`Proportion of species`, `Number of species`), names_to = 'type', values_to = 'meas') %>%
   ggplot(aes(x = major_phylum, y = meas)) +
   geom_col() +
   facet_wrap(type~tdomain, scales = 'free') +
   coord_flip() +
   xlab("Phylum") +
   ylab("Number or proportion of species missing RNR alpha subunits")
+```
+
+## Distribution of RNR classes in GTDB species
+
+All possible combinations of RNRs are present in GTDB species
+(`r figr('rnr-classcombs', T, type = 'Table')`)
+although class I is rare in Archaea. However, a decent number of Archaea rely solely on class I, particularly in the
+Thermoplasmatota, while the Halobacterota encode most of the rest of class I RNRs, though usually in combination with class II
+(`figr('rnr-classcomb-phylum-dist', T, type = 'Figure')`). 
+Otherwise, class II and III dominate in Archaea with most phyla mostly encoding class II, with the exceptions of 
+Euryarchaeota and Altiarchaeota which encode proportionally more class III RNRs.
+
+The "Candidate phyla radiation (CPR)" is known as Patescibacteria in GTDB, more than half of which rely solely on class II.
+This reliance on class II is shared with Cyanobacteria,
+Chloroflexota and Acidobacteriota. Almost half the species in the, admittedly small, Firmicutes_I phylum, encode all three 
+classes of RNR. The much larger Firmicutes_A rely on class III, whereas the Firmicutes encode many different combinations just
+like Actinobacteriota, Bacteroidota, Proteobacteria and Verrucomicrobia
+(`figr('rnr-classcomb-phylum-dist', T, type = 'Figure')`). 
+
+```{r rnr-classcombs, fig.cap = "**RNR class combinations in the two GTDB domains.**"}
+rnr_class_combs %>% count(tdomain, rnr_combination) %>%
+  pivot_wider(names_from = tdomain, values_from = n) %>%
+  rename(`RNR combination` = rnr_combination) %>%
+  DT::datatable()
+```
+
+
+```{r rnr-classcomb-phylum-dist, fig.height = 8, fig.cap = "**Number of species with different combinations of RNR classes per phylum.** Class combinations were calculated based on presence of RNR alpha subunits. Proportions to not sum to 1, as genomes without any RNRs were included in the calculations."}
+rnr_class_combs %>%
+  count(rnr_combination, tdomain, tphylum, name = 'n_combs') %>%
+  inner_join(major_phyla, by = c('tdomain', 'tphylum')) %>%
+  group_by(rnr_combination, tdomain, major_phylum) %>%
+  summarise(n_combs = sum(n_combs), n_genomes = sum(n_genomes), .groups = 'drop') %>%
+  transmute(rnr_combination, tdomain, major_phylum, `Number of species` = n_combs, `Proportion of species` = n_combs/n_genomes) %>%
+  pivot_longer(c(`Proportion of species`, `Number of species`), names_to = 'type', values_to = 'meas') %>%
+  ggplot(aes(x = major_phylum, y = meas, fill = rnr_combination)) +
+  geom_col() +
+  scale_fill_brewer('RNR class combination', palette = 'Paired') +
+  facet_wrap(type~tdomain, scales = 'free') +
+  coord_flip() +
+  xlab("Phylum") +
+  ylab("Number or proportion of species with RNR class presence") +
+  theme(
+    legend.position = 'bottom'
+  )
 ```
 
