@@ -31,6 +31,7 @@ suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(purrr))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(kfigr))
 suppressPackageStartupMessages(library(knitr))
 ```
@@ -192,11 +193,11 @@ classes of RNR. The much larger Firmicutes_A rely on class III, whereas the Firm
 like Actinobacteriota, Bacteroidota, Proteobacteria and Verrucomicrobia
 (`r figr('rnr-classcomb-phylum-dist', T, type = 'Figure')`). 
 
-```{r rnr-classcombs, fig.cap = "**RNR class combinations in the two GTDB domains.**"}
+```{r rnr-classcombs, fig.cap = "**RNR class combinations in the two GTDB domains.**", cache = FALSE}
 rnr_class_combs %>% count(tdomain, rnr_combination) %>%
   pivot_wider(names_from = tdomain, values_from = n) %>%
   rename(`RNR combination` = rnr_combination) %>%
-  DT::datatable()
+  datatable()
 ```
 
 
@@ -228,6 +229,9 @@ class I + II, which continue to increase beyond 10 Mbp (although this happens in
 a small number of genomes) and class II + III which peaks earlier than other
 combinations
 (`r figr('rnr-combs-genome-size', T, type = 'Figure')`).
+The majority of very large genomes containing class I + II are Actinobacteria
+(`r figr('large-genomes-rnr-combs', T, type = 'Table')`), especially *Streptomyces* spp.
+(`r figr('large-actinos-rnr-combs', T, type = 'Table')`).
 
 ```{r rnr-combs-genome_size, fig.height = 6, fig.cap = "**Presence of combinations of RNR classes in genome size classes.** Proportions do not reach 1 because genomes without identified RNRs were included in the total."}
 rnr_class_combs %>%
@@ -251,5 +255,24 @@ rnr_class_combs %>%
   theme(
     legend.position = 'bottom'
   )
+```
+
+```{r large-genomes-rnr-combs, fig.cap = "**RNR class combinations in genomes larger than 10 Mbp.**", cache = FALSE}
+rnr_class_combs %>% filter(est_genome_size > 1e7) %>%
+  count(tdomain, tphylum, tclass, genome_size_class, rnr_combination, name = "n_species") %>%
+  pivot_wider(names_from = rnr_combination, values_from = n_species, values_fill = 0) %>%
+  datatable(
+    colnames = c(
+      'Domain' = 'tdomain', 'Phylum' = 'tphylum', 'Class' = 'tclass',
+      'Genome Mbp' = 'genome_size_class'
+    )
+  )
+```
+
+```{r large-actinos-rnr-combs, fig.cap = "**Large (>= 10 Mbp) actinobacterial genomes and their RNR class combinations.**", cache = FALSE}
+rnr_class_combs %>% filter(tclass == 'Actinobacteria', genome_size_class >= 10) %>%
+  count(torder, tfamily, tgenus, rnr_combination, name = 'n_genomes') %>%
+  pivot_wider(names_from = rnr_combination, values_from = n_genomes, values_fill = 0) %>%
+  datatable()
 ```
 
