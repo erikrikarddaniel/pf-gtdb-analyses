@@ -64,13 +64,16 @@ GTDB database only contains Archaea and Bacteria.
 
 # RNR presence in genomes
 
-Of these species, `r n_rnr_species` contained at least one catalytic subunit protein, i.e.
+Of a total of `r nrow(taxa)` species,
+`r n_rnr_species` contained at least one catalytic subunit RNR protein, i.e.
 `r round(n_rnr_species/nrow(taxa)*100)`%. 
-Genome completeness
-does not seem to be a major factor in explaining the absence of RNR catalytic subunits
+Genome completeness does not seem to be a major factor in explaining the absence of RNR alpha subunits
 (`r figr('missing-rnr-completeness', T, type = 'Figure')`).
+Nor does different requirements for how much of the HMM model is covered by alignments appear to influence
+the number of genomes with at least one RNR alpha subunit
+(`r figr("num-genomes-hmm-coverage", T, type = "Figure")`).
 
-```{r missing-rnr-completeness, fig.height = 4, fig.cap = 'Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.'}
+```{r missing-rnr-completeness, fig.height = 4, fig.cap = '**Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.**'}
 taxa %>% transmute(
   genome_accno, 
   tdomain, 
@@ -86,5 +89,26 @@ taxa %>% transmute(
   geom_col() +
   scale_fill_discrete('Domain') +
   ylab('N. genomes without RNR') + xlab('Completeness percent intervall')
+```
+
+```{r num-genomes-hmm-coverage, fig.height = 4, fig.cap = "**Number of genomes with at least one RNR catalytic subunit as a function of different degrees of HMM model coverage.** Although the number of genomes appear to decrease radically between 0.85 and 0.9, note that the y-axis scale is very short."}
+tibble(min_hmm_coverage = c(0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.00)) %>%
+  mutate(
+    n_genomes = purrr::map(
+      min_hmm_coverage,
+      function(cov) {
+        rnr_alphas %>% 
+          inner_join(proteins, by = 'profile') %>%
+          filter(plen / hmmlen >= cov) %>%
+          inner_join(accessions, by = 'accno') %>%
+          count()
+      }
+    )
+  ) %>%
+  unnest(n_genomes) %>%
+  ggplot(aes(x = min_hmm_coverage, y = n)) +
+  geom_line() +
+  xlab('Minimum HMM model coverage') +
+  ylab('Number of genomes with at least on RNR alpha subunit')
 ```
 
