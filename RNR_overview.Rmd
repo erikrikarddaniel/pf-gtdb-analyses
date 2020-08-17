@@ -41,7 +41,13 @@ suppressPackageStartupMessages(library(knitr))
 ```{r read-data}
 dbsources    <- read_feather("data/pfitmap-gtdb.dbsources.feather")
 hmm_profiles <- read_feather("data/pfitmap-gtdb.hmm_profiles.feather")
-taxa         <- read_feather("data/pfitmap-gtdb-rep.taxa.feather")
+taxa         <- read_feather("data/pfitmap-gtdb-rep.taxa.feather") %>%
+  mutate(
+    checkm_completeness = as.numeric(checkm_completeness),
+    checkm_contamination = as.numeric(checkm_contamination),
+    checkm_strain_heterogeneity = as.numeric(checkm_strain_heterogeneity),
+    genome_size = as.numeric(genome_size)
+  )
 accessions   <- read_feather("data/pfitmap-gtdb-rep-RNRs.accessions.feather")
 ### domains      <- read_feather("data/pfitmap-gtdb-rep-RNRs.domains.feather")
 proteins     <- read_feather("data/pfitmap-gtdb-rep-RNRs.proteins.feather")
@@ -182,7 +188,7 @@ This reliance on class II is shared with Cyanobacteria,
 Chloroflexota and Acidobacteriota. Almost half the species in the, admittedly small, Firmicutes_I phylum, encode all three 
 classes of RNR. The much larger Firmicutes_A rely on class III, whereas the Firmicutes encode many different combinations just
 like Actinobacteriota, Bacteroidota, Proteobacteria and Verrucomicrobia
-(`figr('rnr-classcomb-phylum-dist', T, type = 'Figure')`). 
+(`r figr('rnr-classcomb-phylum-dist', T, type = 'Figure')`). 
 
 ```{r rnr-classcombs, fig.cap = "**RNR class combinations in the two GTDB domains.**"}
 rnr_class_combs %>% count(tdomain, rnr_combination) %>%
@@ -206,6 +212,48 @@ rnr_class_combs %>%
   facet_wrap(type~tdomain, scales = 'free') +
   coord_flip() +
   xlab("Phylum") +
+  ylab("Number or proportion of species with RNR class presence") +
+  theme(
+    legend.position = 'bottom'
+  )
+```
+
+## Relationship between genome size and RNR repertoire
+
+Presence of combinations of RNR classes increase with increasing genome size,
+particularly in Bacteria. Most combinations peak in genomes of 4-10 Mbp, except
+class I + II, which continue to increase beyond 10 Mbp (although this happens in
+a small number of genomes) and class II + III which peaks earlier than other
+combinations
+(`r figr('rnr-combs-genome-size', T, type = 'Figure')`).
+
+```{r rnr-combs-genome_size, fig.height = 6, fig.cap = "**Presence of combinations of RNR classes in genome size classes.** Proportions do not reach 1 because genomes without identified RNRs were included in the total."}
+rnr_class_combs %>%
+  mutate(
+    est_genome_size = genome_size/checkm_completeness*100,
+    genome_size_class = ceiling(est_genome_size/1e6)
+  ) %>%
+  filter(genome_size_class <= 20) %>%
+  count(tdomain, rnr_combination, genome_size_class, name = "n_species_per_comb") %>%
+  inner_join(
+    taxa %>%
+      mutate(
+        est_genome_size = genome_size/checkm_completeness*100,
+        genome_size_class = ceiling(est_genome_size/1e6)
+      ) %>%
+      count(tdomain, genome_size_class, name = "n_species"),
+    by = c('tdomain', 'genome_size_class')
+  ) %>%
+  transmute(
+    rnr_combination, tdomain, genome_size_class, 
+    `Number of species` = n_species_per_comb, `Proportion of species` = n_species_per_comb/n_species
+  ) %>%
+  pivot_longer(c(`Proportion of species`, `Number of species`), names_to = 'type', values_to = 'meas') %>%
+  ggplot(aes(x = genome_size_class, y = meas, fill = rnr_combination)) +
+  geom_col() +
+  scale_fill_brewer('RNR class combination', palette = 'Paired') +
+  facet_wrap(type~tdomain, scales = 'free_y') +
+  xlab("Upper limit genome size (Mbp)") +
   ylab("Number or proportion of species with RNR class presence") +
   theme(
     legend.position = 'bottom'
