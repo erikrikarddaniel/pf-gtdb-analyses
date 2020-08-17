@@ -72,7 +72,6 @@ major_phyla <- major_phyla %>%
   mutate(major_phylum = forcats::fct_explicit_na(major_phylum, na_level = 'Other phyla'))
 
 genomes_wo_rnr_alpha <- taxa %>% 
-  select(genome_accno, tdomain:tspecies) %>%
   anti_join(
     rnr_alphas %>% inner_join(proteins, by = 'profile') %>%
       inner_join(accessions, by = 'accno'),
@@ -121,6 +120,9 @@ the number of genomes with at least one RNR alpha subunit
 
 In many phyla around 10-30% of species lack identified RNR alpha subunits
 (`r figr("no-rnr-alpha-phylum-dist", T, type = "Figure")`).
+
+See `r figr('genomes-wo-rnr-alpha', T, type = 'Table')` for a list of families containing genomes without RNR alpha
+subunits.
 
 ```{r missing-rnr-completeness, fig.height = 3, fig.cap = '**Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.**'}
 taxa %>% transmute(
@@ -174,6 +176,27 @@ genomes_wo_rnr_alpha %>%
   coord_flip() +
   xlab("Phylum") +
   ylab("Number or proportion of species missing RNR alpha subunits")
+```
+
+```{r genomes-wo-rnr-alpha, fig.cap = "**GTDB families with genomes not encoding any identified RNR alpha subunit.**", cache = FALSE}
+genomes_wo_rnr_alpha %>%
+  transmute(
+    tdomain, tphylum, tclass, torder, tfamily, tgenus, tspecies, 
+    est_genome_size = round(est_genome_size)
+  ) %>%
+  group_by(tdomain, tphylum, tclass, torder, tfamily) %>% 
+  summarise(
+    n_genomes = n(), 
+    mean_genome_size = round(mean(est_genome_size) / 1e6, digits = 1), 
+    .groups = 'drop'
+  ) %>%
+  datatable(
+    colnames = c(
+      'Domain' = 'tdomain', 'Phylum' = 'tphylum', 'Class' = 'tclass', 'Order' = 'torder',
+      'Family' = 'tfamily', 
+      'Number of species' = 'n_genomes', 'Mean genome size (Mbp)' = 'mean_genome_size'
+    )
+  )
 ```
 
 ## Distribution of RNR classes in GTDB species
