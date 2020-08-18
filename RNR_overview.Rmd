@@ -37,24 +37,19 @@ suppressPackageStartupMessages(library(knitr))
 ```
 
 ```{r constants}
+N_TOP_PHYLA = 20        # Number of top phyla to present in tables and figures
 ```
 
 ```{r read-data}
 dbsources    <- read_feather("data/pfitmap-gtdb.dbsources.feather")
 hmm_profiles <- read_feather("data/pfitmap-gtdb.hmm_profiles.feather")
-taxa         <- read_feather("data/pfitmap-gtdb-rep.taxa.feather") %>%
-  mutate(
-    checkm_completeness = as.numeric(checkm_completeness),
-    checkm_contamination = as.numeric(checkm_contamination),
-    checkm_strain_heterogeneity = as.numeric(checkm_strain_heterogeneity),
-    genome_size = as.numeric(genome_size),
-    est_genome_size = genome_size/checkm_completeness*100,
-    genome_size_class = ceiling(est_genome_size/1e6)
-  )
+taxa         <- read_feather("data/pfitmap-gtdb-rep.taxa.feather")
 accessions   <- read_feather("data/pfitmap-gtdb-rep-RNRs.accessions.feather")
 ### domains      <- read_feather("data/pfitmap-gtdb-rep-RNRs.domains.feather")
 proteins     <- read_feather("data/pfitmap-gtdb-rep-RNRs.proteins.feather")
 ### sequences    <- read_feather("data/pfitmap-gtdb-rep-RNRs.sequences.feather")
+
+genomes_wo_rnr_alpha <- read_feather('data/pfitmap-gtdb-rep-RNRs.genomes_wo_rnr_alpha.feather')
 ```
 ```{r tables-and-numbers}
 # Convenience tables and numbers
@@ -62,7 +57,7 @@ rnr_alphas <- hmm_profiles %>% filter(pclass %in% c('NrdA', 'NrdD', 'NrdJ'))
 
 major_phyla <- taxa %>% 
   count(tdomain, tphylum, name = "n_genomes") %>% 
-  group_by(tdomain) %>% top_n(20, n_genomes) %>% ungroup() %>%
+  group_by(tdomain) %>% top_n(N_TOP_PHYLA, n_genomes) %>% ungroup() %>%
   mutate(major_phylum = tphylum)
 major_phyla <- major_phyla %>% 
   union(
@@ -70,13 +65,6 @@ major_phyla <- major_phyla %>%
       count(tdomain, tphylum, major_phylum = NA, name = "n_genomes")
   ) %>%
   mutate(major_phylum = forcats::fct_explicit_na(major_phylum, na_level = 'Other phyla'))
-
-genomes_wo_rnr_alpha <- taxa %>% 
-  anti_join(
-    rnr_alphas %>% inner_join(proteins, by = 'profile') %>%
-      inner_join(accessions, by = 'accno'),
-    by = "genome_accno"
-  ) 
 
 n_rnr_species <- rnr_alphas %>%
   inner_join(proteins %>% select(profile, accno), by = 'profile') %>% 

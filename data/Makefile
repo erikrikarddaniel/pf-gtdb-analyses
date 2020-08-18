@@ -6,6 +6,7 @@ all:
 	make subset_reps
 	make subset_rnrs_gtdb 
 	make subset_rnrs_reps
+	make rnr_convenience_tables
 
 clean:
 	rm -f *.feather *.tsv subset_reps subset_rnrs_gtdb subset_rnrs_reps
@@ -21,3 +22,6 @@ subset_rnrs_gtdb: pfitmap-gtdb.accessions.feather pfitmap-gtdb.domains.feather p
 subset_rnrs_reps: pfitmap-gtdb-rep.accessions.feather pfitmap-gtdb-rep.domains.feather pfitmap-gtdb-rep.proteins.feather pfitmap-gtdb-rep.sequences.feather pfitmap-gtdb-rep.domtblout.feather pfitmap-gtdb-rep.tblout.feather
 	../scripts/select_RNR_related.R pfitmap-gtdb-rep
 	@touch $@
+
+rnr_convenience_tables: pfitmap-gtdb-rep.taxa.feather
+	../scripts/rnr_convenience_tables.R
