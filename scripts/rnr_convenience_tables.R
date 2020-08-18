@@ -81,3 +81,27 @@ rnr_alphas %>%
   ) %>%
   inner_join(taxa, by = 'genome_accno') %>%
   write_feather('pfitmap-gtdb-rep-RNRs.rnr_class_combs.feather')
+
+# Phylum sets of various sizes
+counted_phyla <- taxa %>% count(tdomain, tphylum, name = 'n_species')
+tibble(n= c(11, 20, 50)) %>%
+  mutate(
+    d = purrr::map(
+      n,
+      function(n_taxa) {
+        counted_phyla %>% group_by(tdomain) %>% top_n(n_taxa, n_species) %>% 
+          mutate(n_taxa_level = sprintf("top%dphyla", n_taxa))
+      }
+    )
+  ) %>%
+  unnest(d) %>%
+  select(-n, -n_species) %>%
+  mutate(ph = tphylum) %>%
+  pivot_wider(names_from = n_taxa_level, values_from = ph) %>%
+  right_join(counted_phyla, by = c('tdomain', 'tphylum')) %>%
+  mutate(
+    top11phyla = forcats::fct_explicit_na(top11phyla, na_level = 'Other phyla'),
+    top20phyla = forcats::fct_explicit_na(top20phyla, na_level = 'Other phyla'),
+    top50phyla = forcats::fct_explicit_na(top50phyla, na_level = 'Other phyla')
+  ) %>%
+  write_feather('pfitmap-gtdb-rep.topphyla.feather')
