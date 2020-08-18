@@ -19,6 +19,7 @@
 #   pfitmap-gtdb-rep.taxa.feather (type changes, new columns)
 #   pfitmap-gtdb.rnr_alphas.feather
 #   pfitmap-gtdb-rep-RNRs.genomes_wo_rnr_alpha.feather
+#   pfitmap-gtdb-rep-RNRs.rnr_class_combs.feather
 #
 # Author: daniel.lundin@dbb.su.se
 
@@ -63,3 +64,20 @@ taxa %>%
     by = "genome_accno"
   ) %>%
   write_feather('pfitmap-gtdb-rep-RNRs.genomes_wo_rnr_alpha.feather')
+
+write('\t  --> RNR class combinations (pfitmap-gtdb-rep-RNRs.rnr_class_combs.feather)', stderr())
+rnr_alphas %>%
+  inner_join(proteins, by = 'profile') %>%
+  inner_join(accessions, by = 'accno') %>%
+  distinct(genome_accno, pclass) %>%
+  pivot_wider(names_from = pclass, values_from = pclass) %>%
+  unite(rnr_combination, NrdA, NrdD, NrdJ, sep = ':', na.rm = TRUE) %>%
+  mutate(
+    rnr_combination = factor(
+      rnr_combination,
+      levels = c('NrdA', 'NrdJ', 'NrdD', 'NrdA:NrdJ', 'NrdA:NrdD', 'NrdD:NrdJ', 'NrdA:NrdD:NrdJ'),
+      ordered = TRUE
+    )
+  ) %>%
+  inner_join(taxa, by = 'genome_accno') %>%
+  write_feather('pfitmap-gtdb-rep-RNRs.rnr_class_combs.feather')

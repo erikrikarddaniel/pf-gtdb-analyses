@@ -23,5 +23,6 @@ subset_rnrs_reps: pfitmap-gtdb-rep.accessions.feather pfitmap-gtdb-rep.domains.f
 	../scripts/select_RNR_related.R pfitmap-gtdb-rep
 	@touch $@
 
-rnr_convenience_tables: pfitmap-gtdb-rep.taxa.feather
+rnr_convenience_tables: pfitmap-gtdb-rep.taxa.feather pfitmap-gtdb.hmm_profiles.feather pfitmap-gtdb-rep-RNRs.accessions.feather pfitmap-gtdb-rep-RNRs.proteins.feather
 	../scripts/rnr_convenience_tables.R
+	@touch $@
