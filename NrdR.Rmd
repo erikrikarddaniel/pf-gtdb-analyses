@@ -76,19 +76,6 @@ GTDB species-representative genomes code for NrdR.
 Of these, the majority are bacterial, but around 10% of archaeal species also encode NrdR 
 (`r figr('nrdr-domain-dist', T, type = 'Figure')`).
 
-## NrdR with various RNR class combinations
-
-NrdRs were found with all possible combinations of RNR classes, including a few cases of
-genomes without any identified RNR alpha subunit
-(`r figr('nrdr-domain-dist', T, type = 'Figure')`). 
-Particularly in Archaea, NrdR together with only class II RNR is common, only class III
-is relatively common in three Firmicutes_*N* phyla and only class I with NrdR is 
-predominantly found in Actinobacteriota, Proteobacteria and Verrucomicrobiota.
-Strikingly, two of the 20 largest bacterial phyla virtually lack NrdR: Bacteroidota and
-Campylobacterota. In contrast, the two archaeal phyla that start with "Nano",
-Nanoarchaeota and Nanohaloarchaeota, have strikingly large proportions of species
-encoding NrdR.
-
 ```{r nrdr-domain-dist, fig.height = 2, fig.width = 6, fig.cap = '**GTDB species encoding NrdR.** Proportions were calculated to all GTDB species and not only those that encode an RNR alpha subunit.'}
 nrdrs %>%
   distinct(tdomain, genome_accno) %>% # Don't count paralogs
@@ -104,6 +91,19 @@ nrdrs %>%
   xlab('Domain') +
   ylab('Number or proportion of GTDB species')
 ```
+
+## NrdR with various RNR class combinations
+
+NrdRs were found with all possible combinations of RNR classes, including a few cases of
+genomes without any identified RNR alpha subunit
+(`r figr('nrdr-domain-dist', T, type = 'Figure')`). 
+Particularly in Archaea, NrdR together with only class II RNR is common, only class III
+is relatively common in three Firmicutes_*N* phyla and only class I with NrdR is 
+predominantly found in Actinobacteriota, Proteobacteria and Verrucomicrobiota.
+Strikingly, two of the 20 largest bacterial phyla virtually lack NrdR: Bacteroidota and
+Campylobacterota. In contrast, the two archaeal phyla that start with "Nano",
+Nanoarchaeota and Nanohaloarchaeota, have strikingly large proportions of species
+encoding NrdR.
 
 ```{r nrdr-in-rnr-combs, fig.height = 7, fig.cap = '**NrdR in presence of different RNR class combinations.** Proportions usually do not sum to one because species without any detected RNR alpha subunits were included.'}
 nrdrs %>% left_join(rnr_class_combs %>% select(genome_accno, rnr_combination), by = 'genome_accno') %>%
