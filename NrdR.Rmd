@@ -14,6 +14,9 @@ output:
     fig_width: 8
     number_sections: yes
     toc: yes
+bibliography: [ bibliography.bib ]
+biblio-style: apalike
+link-citations: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -96,7 +99,7 @@ nrdrs %>%
 
 NrdRs were found with all possible combinations of RNR classes, including a few cases of
 genomes without any identified RNR alpha subunit
-(`r figr('nrdr-domain-dist', T, type = 'Figure')`). 
+(`r figr('nrdr-in-rnr_combs', T, type = 'Figure')`). 
 Particularly in Archaea, NrdR together with only class II RNR is common, only class III
 is relatively common in three Firmicutes_*N* phyla and only class I with NrdR is 
 predominantly found in Actinobacteriota, Proteobacteria and Verrucomicrobiota.
@@ -104,6 +107,8 @@ Strikingly, two of the 20 largest bacterial phyla virtually lack NrdR: Bacteroid
 Campylobacterota. In contrast, the two archaeal phyla that start with "Nano",
 Nanoarchaeota and Nanohaloarchaeota, have strikingly large proportions of species
 encoding NrdR.
+
+Paper about a cultured Nanohaloarchaeota species: [ @la_cono_symbiosis_2020 ]
 
 ```{r nrdr-in-rnr-combs, fig.height = 7, fig.cap = '**NrdR in presence of different RNR class combinations.** Proportions usually do not sum to one because species without any detected RNR alpha subunits were included.'}
 nrdrs %>% left_join(rnr_class_combs %>% select(genome_accno, rnr_combination), by = 'genome_accno') %>%
@@ -135,5 +140,39 @@ nrdrs %>% left_join(rnr_class_combs %>% select(genome_accno, rnr_combination), b
 
 ## NrdRs in single class species
 
-* Count number of RNR alphas
+It is not uncommon to find NrdR in species encoding a single RNR alpha subunit of a single class
+and it appears similarly widespread for all three classes
+(`r figr('num-single-class-rnr-alphas', T, type = 'Figure')`).
+
+```{r num-single-class-rnr-alphas, fig.height = 8, fig.width = 12, fig.cap = '**Number of species in which NrdR is associated with one or more RNRs of the same class.** (*Note:* I know the scale for number of bacterial genomes is strange, but not why.)'}
+nrdrs %>% select(genome_accno, tdomain:tspecies) %>% distinct() %>%
+  inner_join(
+    rnr_class_combs %>% filter(rnr_combination %in% c('NrdA', 'NrdJ', 'NrdD')) %>%
+      select(genome_accno, rnr_combination) %>%
+      inner_join(
+        rnr_alphas %>% inner_join(proteins, by = 'profile') %>%
+          inner_join(accessions, by = 'accno') %>%
+          count(genome_accno, name = 'n_rnr_alphas'),
+        by = 'genome_accno'
+      ),
+    by = 'genome_accno'
+  ) %>%
+  count(tdomain, tphylum, rnr_combination, n_rnr_alphas, name = 'n_nrdr_species') %>%
+  mutate(n_rnr_alphas = ifelse(n_rnr_alphas > 3, '>3 RNR alphas', sprintf('%d RNR alphas', n_rnr_alphas))) %>%
+  inner_join(topphyla %>% select(tdomain, tphylum, top20phyla), by = c('tdomain', 'tphylum')) %>%
+  group_by(tdomain, top20phyla, rnr_combination, n_rnr_alphas) %>%
+  summarise(n_nrdr_species = sum(n_nrdr_species), .groups = 'drop') %>%
+  mutate(n_nrdr_species = factor(n_nrdr_species)) %>%
+  ggplot(aes(x = top20phyla, y = n_nrdr_species, fill = n_rnr_alphas)) +
+  geom_col() +
+  scale_fill_discrete('N. RNR alpha paralogs') +
+  facet_wrap(tdomain ~ rnr_combination, scales = 'free') +
+  coord_flip() +
+  xlab('Phylum') +
+  ylab('N. NrdR species') +
+  theme(legend.position = 'bottom')
+```
+
 * Look at subclasses
+
+# References {-}
