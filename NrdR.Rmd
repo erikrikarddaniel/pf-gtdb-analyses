@@ -67,15 +67,18 @@ nrdrs <- hmm_profiles %>% filter(pclass == 'NrdR') %>%
 
 # Data
 
-The data in this document was based on a search for RNR proteins in  `r nrow(taxa)` 
-species in the  `r dbsources %>% pull(version)`  release of the GTDB database. The
-GTDB database only contains Archaea and Bacteria.
+The data in this document was based on a search for RNR proteins in  `r nrow(taxa)` *species* --
+i.e. the representative genome of each species -- in the  `r dbsources %>% pull(version)`  release
+of the GTDB database. The representative genome is the one that is considered "best" in terms of
+completeness, contaminiation etc. 
+
+The GTDB database only contains Archaea and Bacteria.
 
 # Results
 
 A total of 
 `r nrdrs %>% distinct(genome_accno) %>% nrow()` 
-GTDB species-representative genomes code for NrdR. 
+GTDB species-representative genomes encode NrdR. 
 Of these, the majority are bacterial, but around 10% of archaeal species also encode NrdR 
 (`r figr('nrdr-domain-dist', T, type = 'Figure')`).
 
@@ -142,10 +145,11 @@ nrdrs %>% left_join(rnr_class_combs %>% select(genome_accno, rnr_combination), b
 
 It is not uncommon to find NrdR in species encoding a single RNR alpha subunit of a single class
 and it appears similarly widespread for all three classes
-(`r figr('num-single-class-rnr-alphas', T, type = 'Figure')`).
+(`r figr('num-single-class-rnr-alphas-plot', T, type = 'Figure')` and
+`r figr('num-single-class-rnr-alphas-table', T, type = 'Table')`).
 
-```{r num-single-class-rnr-alphas, fig.height = 8, fig.width = 12, fig.cap = '**Number of species in which NrdR is associated with one or more RNRs of the same class.** (*Note:* I know the scale for number of bacterial genomes is strange, but not why.)'}
-nrdrs %>% select(genome_accno, tdomain:tspecies) %>% distinct() %>%
+```{r num-single-class-rnr-alphas-plot, fig.height = 8, fig.width = 12, fig.cap = '**Number of species in which NrdR is associated with one or more RNRs of the same class.** (*Note:* I know the scale for number of bacterial genomes is strange, but not why.)'}
+single_class_nrdrs <- nrdrs %>% select(genome_accno, tdomain:tspecies) %>% distinct() %>%
   inner_join(
     rnr_class_combs %>% filter(rnr_combination %in% c('NrdA', 'NrdJ', 'NrdD')) %>%
       select(genome_accno, rnr_combination) %>%
@@ -158,14 +162,21 @@ nrdrs %>% select(genome_accno, tdomain:tspecies) %>% distinct() %>%
     by = 'genome_accno'
   ) %>%
   count(tdomain, tphylum, rnr_combination, n_rnr_alphas, name = 'n_nrdr_species') %>%
-  mutate(n_rnr_alphas = ifelse(n_rnr_alphas > 3, '>3 RNR alphas', sprintf('%d RNR alphas', n_rnr_alphas))) %>%
+  mutate(
+    n_rnr_alphas = ifelse(n_rnr_alphas > 3, '>3 RNR alphas', sprintf('%d RNR alphas', n_rnr_alphas)) %>%
+      factor(
+        levels = c('1 RNR alphas', '2 RNR alphas', '3 RNR alphas', '>3 RNR alphas'),
+        ordered = TRUE
+      ) 
+  ) 
+single_class_nrdrs %>%
   inner_join(topphyla %>% select(tdomain, tphylum, top20phyla), by = c('tdomain', 'tphylum')) %>%
   group_by(tdomain, top20phyla, rnr_combination, n_rnr_alphas) %>%
   summarise(n_nrdr_species = sum(n_nrdr_species), .groups = 'drop') %>%
   mutate(n_nrdr_species = factor(n_nrdr_species)) %>%
   ggplot(aes(x = top20phyla, y = n_nrdr_species, fill = n_rnr_alphas)) +
   geom_col() +
-  scale_fill_discrete('N. RNR alpha paralogs') +
+  scale_fill_viridis_d('N. RNR alpha paralogs') +
   facet_wrap(tdomain ~ rnr_combination, scales = 'free') +
   coord_flip() +
   xlab('Phylum') +
@@ -173,6 +184,12 @@ nrdrs %>% select(genome_accno, tdomain:tspecies) %>% distinct() %>%
   theme(legend.position = 'bottom')
 ```
 
-* Look at subclasses
+```{r num-single-class-rnr-alphas-table, fig.cap = '**Number of species in which NrdR is associated with one or more RNRs of the same class.**'}
+single_class_nrdrs %>% pivot_wider(names_from = n_rnr_alphas, values_from = n_nrdr_species, values_fn = list) %>%
+  datatable(
+    colnames = c('Domain' = 'tdomain', 'Phylum' = 'tphylum', 'RNR combination' = 'rnr_combination')
+  )
+```
+
 
 # References {-}
