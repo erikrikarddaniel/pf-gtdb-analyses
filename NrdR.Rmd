@@ -160,7 +160,8 @@ single_class_nrdrs <- nrdrs %>% select(genome_accno, tdomain:tspecies) %>% disti
         by = 'genome_accno'
       ),
     by = 'genome_accno'
-  ) %>%
+  ) 
+c <- single_class_nrdrs %>%
   count(tdomain, tphylum, rnr_combination, n_rnr_alphas, name = 'n_nrdr_species') %>%
   mutate(
     n_rnr_alphas = ifelse(n_rnr_alphas > 3, '>3 RNR alphas', sprintf('%d RNR alphas', n_rnr_alphas)) %>%
@@ -169,7 +170,7 @@ single_class_nrdrs <- nrdrs %>% select(genome_accno, tdomain:tspecies) %>% disti
         ordered = TRUE
       ) 
   ) 
-single_class_nrdrs %>%
+c %>%
   inner_join(topphyla %>% select(tdomain, tphylum, top20phyla), by = c('tdomain', 'tphylum')) %>%
   group_by(tdomain, top20phyla, rnr_combination, n_rnr_alphas) %>%
   summarise(n_nrdr_species = sum(n_nrdr_species), .groups = 'drop') %>%
@@ -185,10 +186,43 @@ single_class_nrdrs %>%
 ```
 
 ```{r num-single-class-rnr-alphas-table, fig.cap = '**Number of species in which NrdR is associated with one or more RNRs of the same class.**'}
-single_class_nrdrs %>% pivot_wider(names_from = n_rnr_alphas, values_from = n_nrdr_species, values_fn = list) %>%
+c %>% pivot_wider(names_from = n_rnr_alphas, values_from = n_nrdr_species, values_fn = list) %>%
   datatable(
     colnames = c('Domain' = 'tdomain', 'Phylum' = 'tphylum', 'RNR combination' = 'rnr_combination')
   )
+```
+
+### NrdRs with multiple RNRs of the same class
+
+Among species with more than one RNR of the same class combined with an NrdR, it's most common to find
+two different subclasses but a fair number of species have a single subclass
+(`r figr('single-class-subclasses', T, type = 'Figure')`).
+
+```{r single-class-subclass, fig.height = 6, fig.width = 8, fig.cap = "**Number of different subclasses in species with an NrdR combined with more than one RNR of the same class.**"}
+single_class_nrdrs %>% filter(n_rnr_alphas > 1, tdomain == 'Bacteria') %>%
+  inner_join(
+    accessions %>% select(accno, genome_accno) %>%
+      inner_join(proteins %>% select(accno, profile), by = 'accno'),
+    by = 'genome_accno'
+  ) %>%
+  inner_join(rnr_alphas %>% select(profile, pclass:psubclass), by = 'profile') %>%
+  group_by(tdomain, tphylum, tclass, pclass, tspecies, psubclass) %>%
+  summarise(n_subclass = n(), .groups = 'drop_last') %>%
+  summarise(n_subclasses = n(), .groups = 'drop') %>%
+  mutate(
+    n_subclasses = sprintf("%d subclasses", n_subclasses)
+  ) %>%
+  inner_join(topphyla %>% select(tdomain, tphylum, top20phyla), by = c('tdomain', 'tphylum')) %>%
+  group_by(tdomain, top20phyla, pclass, n_subclasses) %>%
+  summarise(n_subclassnum = n(), .groups = 'drop') %>%
+  ggplot(aes(x = top20phyla, y = n_subclassnum, fill = n_subclasses)) +
+  geom_col() +
+  scale_fill_viridis_d('N. different subclasses') +
+  facet_wrap(tdomain ~ pclass) +
+  coord_flip() +
+  theme(legend.position = 'bottom') +
+  ylab('N. species') +
+  xlab('Phylum')
 ```
 
 
