@@ -82,6 +82,9 @@ GTDB species-representative genomes encode NrdR.
 Of these, the majority are bacterial, but around 10% of archaeal species also encode NrdR 
 (`r figr('nrdr-domain-dist', T, type = 'Figure')`).
 
+There are `r nrdrs %>% group_by(genome_accno) %>% filter(n() > 1) %>% nrow()` species representative
+genomes encoding more than one copy of NrdR.
+
 ```{r nrdr-domain-dist, fig.height = 2, fig.width = 6, fig.cap = '**GTDB species encoding NrdR.** Proportions were calculated to all GTDB species and not only those that encode an RNR alpha subunit.'}
 nrdrs %>%
   distinct(tdomain, genome_accno) %>% # Don't count paralogs
