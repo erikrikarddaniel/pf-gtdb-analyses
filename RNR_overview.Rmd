@@ -17,7 +17,7 @@ output:
 ---
 
 ```{r setup, echo=F, cache = FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.path='figures/', cache = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.path='figures/', cache = TRUE, fig.width = 10)
 ggplot2::theme_set(ggplot2::theme_bw())
 ```
 
@@ -64,6 +64,7 @@ major_phyla <- major_phyla %>%
     taxa %>% anti_join(major_phyla, by = c('tdomain', 'tphylum')) %>%
       count(tdomain, tphylum, major_phylum = NA, name = "n_genomes")
   ) %>%
+  group_by(tdomain, major_phylum) %>% mutate(n_genomes = sum(n_genomes)) %>% ungroup() %>%
   mutate(major_phylum = forcats::fct_explicit_na(major_phylum, na_level = 'Other phyla'))
 
 n_rnr_species <- rnr_alphas %>%
@@ -95,6 +96,7 @@ In many phyla around 10-30% of species lack identified RNR alpha subunits
 (`r figr("no-rnr-alpha-phylum-dist", T, type = "Figure")`).
 
 See `r figr('genomes-wo-rnr-alpha', T, type = 'Table')` for a list of families containing genomes without RNR alpha
+
 subunits.
 
 ```{r missing-rnr-completeness, fig.height = 3, fig.cap = '**Number of species representative GTDB genomes containing no identifiable RNR alpha subunit as a function of genome completeness.**'}
@@ -140,12 +142,12 @@ tibble(min_hmm_coverage = c(0.25, 0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0
 genomes_wo_rnr_alpha %>%
   count(tdomain, tphylum) %>%
   inner_join(major_phyla, by = c('tdomain', 'tphylum')) %>%
-  group_by(tdomain, major_phylum) %>% summarise(n = sum(n), n_genomes = sum(n_genomes), .groups = 'drop') %>%
+  group_by(tdomain, major_phylum, n_genomes) %>% summarise(n = sum(n), .groups = 'drop') %>%
   transmute(tdomain, major_phylum, `Proportion of species` = n/n_genomes, `Number of species` = n) %>%
   pivot_longer(c(`Proportion of species`, `Number of species`), names_to = 'type', values_to = 'meas') %>%
   ggplot(aes(x = major_phylum, y = meas)) +
   geom_col() +
-  facet_wrap(type~tdomain, scales = 'free') +
+  facet_wrap(tdomain ~ type, scales = 'free') +
   coord_flip() +
   xlab("Phylum") +
   ylab("Number or proportion of species missing RNR alpha subunits")
@@ -201,14 +203,14 @@ rnr_class_combs %>% count(tdomain, rnr_combination) %>%
 rnr_class_combs %>%
   count(rnr_combination, tdomain, tphylum, name = 'n_combs') %>%
   inner_join(major_phyla, by = c('tdomain', 'tphylum')) %>%
-  group_by(rnr_combination, tdomain, major_phylum) %>%
-  summarise(n_combs = sum(n_combs), n_genomes = sum(n_genomes), .groups = 'drop') %>%
+  group_by(rnr_combination, tdomain, major_phylum, n_genomes) %>%
+  summarise(n_combs = sum(n_combs), .groups = 'drop') %>%
   transmute(rnr_combination, tdomain, major_phylum, `Number of species` = n_combs, `Proportion of species` = n_combs/n_genomes) %>%
   pivot_longer(c(`Proportion of species`, `Number of species`), names_to = 'type', values_to = 'meas') %>%
   ggplot(aes(x = major_phylum, y = meas, fill = rnr_combination)) +
   geom_col() +
   scale_fill_brewer('RNR class combination', palette = 'Paired') +
-  facet_wrap(type~tdomain, scales = 'free') +
+  facet_wrap(tdomain ~ type, scales = 'free') +
   coord_flip() +
   xlab("Phylum") +
   ylab("Number or proportion of species with RNR class presence") +
