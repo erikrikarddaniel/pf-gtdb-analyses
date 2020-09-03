@@ -97,7 +97,7 @@ In many phyla around 10-30% of species lack identified RNR alpha subunits
 See `r figr('genomes-wo-rnr-alpha', T, type = 'Table')` for a list of families containing genomes without RNR alpha
 subunits.
 
-```{r missing-rnr-completeness, fig.height = 3, fig.cap = '**Number of species representative GTDB genomes missing any RNR alpha subunit as a function of genome completeness.**'}
+```{r missing-rnr-completeness, fig.height = 3, fig.cap = '**Number of species representative GTDB genomes containing no identifiable RNR alpha subunit as a function of genome completeness.**'}
 taxa %>% transmute(
   genome_accno, 
   tdomain, 
