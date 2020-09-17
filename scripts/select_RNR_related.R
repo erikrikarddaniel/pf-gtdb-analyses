@@ -19,7 +19,7 @@ write(sprintf("\tReading feather files prefixed with '%s', subsetting tables to 
 hmm_profiles <- read_feather("pfitmap-gtdb.hmm_profiles.feather") %>% as.data.table()
 proteins <- read_feather(sprintf("%s.proteins.feather", prefix)) %>% as.data.table()
 
-rnrs = hmm_profiles %>% lazy_dt() %>%
+rnrs <- hmm_profiles %>% lazy_dt() %>%
   inner_join(lazy_dt(proteins), by = 'profile') %>%
   filter(psuperfamily %in% c('Ferritin-like', 'NrdGRE', 'Flavodoxin superfamily', 'NrdR-superfamily')) %>%
   select(accno, profile) %>%
@@ -39,7 +39,7 @@ read_feather(sprintf("%s.accessions.feather", prefix)) %>% as.data.table() %>% l
 write("	  --> accessions written", stderr())
 
 read_feather(sprintf("%s.domains.feather", prefix)) %>% as.data.table() %>% lazy_dt() %>%
-  inner_join(lazy_dt(rnrs), by = c('accno', 'profile')) %>%
+  inner_join(lazy_dt(rnrs) %>% distinct(accno), by = 'accno') %>%
   as.data.table() %>%
   write_feather(sprintf("%s-RNRs.domains.feather", prefix))
 write("	  --> domains written", stderr())
