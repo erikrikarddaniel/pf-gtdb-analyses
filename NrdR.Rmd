@@ -44,6 +44,7 @@ hmm_profiles <- read_feather("data/pfitmap-gtdb.hmm_profiles.feather")
 taxa         <- read_feather("data/pfitmap-gtdb-rep.taxa.feather")
 accessions   <- read_feather("data/pfitmap-gtdb-rep-RNRs.accessions.feather")
 proteins     <- read_feather("data/pfitmap-gtdb-rep-RNRs.proteins.feather")
+domains      <- read_feather("data/pfitmap-gtdb-rep-RNRs.domains.feather")
 
 rnr_alphas           <- read_feather('data/pfitmap-gtdb.rnr_alphas.feather')
 ### genomes_wo_rnr_alpha <- read_feather('data/pfitmap-gtdb-rep-RNRs.genomes_wo_rnr_alpha.feather')
@@ -56,6 +57,9 @@ rnr_class_combs      <- read_feather('data/pfitmap-gtdb-rep-RNRs.rnr_class_combs
     )
   )
 topphyla             <- read_feather('data/pfitmap-gtdb-rep.topphyla.feather')
+
+atp_cones <- hmm_profiles %>% filter(profile == 'ATP-cone') %>%
+  inner_join(domains %>% distinct(profile, accno), by = 'profile')
 ```
 
 ```{r nrdrs}
@@ -228,5 +232,41 @@ single_class_nrdrs %>% filter(n_rnr_alphas > 1, tdomain == 'Bacteria') %>%
   xlab('Phylum')
 ```
 
+## Are NrdRs complementing activity regulation?
+
+There is no obvious relationship between NrdRs with single RNRs without ATP-cones,
+(`r figr('single-rnr-atp-cones', T, type = 'Figure')`).
+
+```{r single-rnr-atp-cones, fig.height = 4, fig.width = 10, fig.cap = "**Genomes with a single RNR with or without ATP-cone, with or without NrdR in the genome.**"}
+atpc_rnrs <- rnr_alphas %>%
+  inner_join(proteins %>% select(profile, accno), by = 'profile') %>%
+  left_join(atp_cones %>% transmute(accno, atp_cones = 1), by = 'accno') %>%
+  replace_na(list(atp_cones = 0)) %>%
+  group_by(accno, pclass, psubclass) %>% summarise(atp_cones = sum(atp_cones), .groups = 'drop') %>%
+  inner_join(accessions %>% select(accno, genome_accno), by = 'accno') %>%
+  inner_join(taxa, by = 'genome_accno')
+atpc_rnrs %>% 
+  group_by(genome_accno) %>% filter(n() == 1) %>% ungroup() %>%
+  left_join(nrdrs %>% transmute(genome_accno, nrdrs = 1), by = 'genome_accno') %>%
+  replace_na(list(nrdrs = 0)) %>%
+  mutate(
+    atpc_nrdr = case_when(
+      atp_cones > 0 & nrdrs > 0 ~ 'NrdR ATP-cone',
+      atp_cones > 0             ~ 'Only ATP-cone',
+                      nrdrs > 0 ~ 'NrdR no ATP-cone',
+      TRUE                      ~ 'Neither'
+    )
+  ) %>%
+  inner_join(topphyla %>% select(tphylum:top50phyla), by = 'tphylum') %>%
+  count(tdomain, top20phyla, atpc_nrdr) %>% 
+  ggplot(aes(x = top20phyla, y = n, fill = atpc_nrdr)) +
+  geom_col() +
+  #scale_fill_brewer() + #palette = 'Paired') +
+  scale_fill_viridis_d('Combination') +
+  facet_wrap(~tdomain, scales = 'free') +
+  xlab('N. species') + ylab('Phylum') +
+  coord_flip() +
+  theme(legend.position = 'bottom')
+```
 
 # References {-}
